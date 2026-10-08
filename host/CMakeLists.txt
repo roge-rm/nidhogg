@@ -22,6 +22,8 @@ find_path(JACK_INC jack/jack.h)
 find_library(JACK_LIB jack)
 find_path(LO_INC lo/lo.h)
 find_library(LO_LIB lo)
+# The SuperCollider plugin needs SC's plugin headers.
+find_path(SC_INC SC_PlugIn.h PATH_SUFFIXES SuperCollider/plugin_interface)
 
 # Chompi builds at -O3, gnu++14 and gnu11, without exceptions or RTTI.
 # The STM32 HAL names hardware.h uses come in through the HAL shim.
@@ -30,7 +32,7 @@ set(FW_CXX_FLAGS -O3 -g -std=gnu++14 -fno-exceptions -fno-rtti -w
 set(FW_C_FLAGS -O3 -g -std=gnu11 -w)
 
 function(nidhogg_firmware fw)
-    cmake_parse_arguments(A "" "" "SOURCES;LIBDAISY" ${ARGN})
+    cmake_parse_arguments(A "" "UGEN;OSC_PORT" "SOURCES;LIBDAISY" ${ARGN})
     set(V ${CHOMPI_DIR}/${fw})
     set(B ${CMAKE_CURRENT_BINARY_DIR}/fw/${fw})
 
@@ -96,19 +98,34 @@ function(nidhogg_firmware fw)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/board_${fw}.cpp
         PROPERTIES COMPILE_OPTIONS "-std=gnu++17;-frtti;-fexceptions;-Wall")
     target_link_libraries(${lib} PUBLIC Threads::Threads)
+    # Also linked into a SuperCollider plugin.
+    set_property(TARGET ${lib} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     add_executable(nidhogg-${fw}-render src/render.cpp)
     target_compile_options(nidhogg-${fw}-render PRIVATE -O2 -Wall)
     target_link_libraries(nidhogg-${fw}-render ${lib})
 
     if(JACK_INC AND JACK_LIB AND LO_INC AND LO_LIB)
-        add_executable(nidhogg-${fw} src/run.cpp)
+        add_executable(nidhogg-${fw} src/run.cpp src/bridge.cpp)
         target_compile_options(nidhogg-${fw} PRIVATE -O2 -Wall)
         target_include_directories(nidhogg-${fw} PRIVATE ${JACK_INC} ${LO_INC})
         target_link_libraries(nidhogg-${fw} ${lib} ${JACK_LIB} ${LO_LIB})
     endif()
+
+    if(SC_INC AND LO_INC AND LO_LIB)
+        # scsynth loads every plugin at once, and each firmware carries its own
+        # libDaisy, so nothing but the plugin entry points may be visible.
+        add_library(${A_UGEN} MODULE src/ugen.cpp src/bridge.cpp)
+        set_target_properties(${A_UGEN} PROPERTIES PREFIX "" CXX_VISIBILITY_PRESET hidden)
+        target_compile_definitions(${A_UGEN} PRIVATE NIDHOGG_UGEN=${A_UGEN}
+                                   NIDHOGG_OSC_PORT=${A_OSC_PORT})
+        target_compile_options(${A_UGEN} PRIVATE -O2 -Wall)
+        target_include_directories(${A_UGEN} PRIVATE ${SC_INC} ${SC_INC}/../common ${LO_INC})
+        target_link_libraries(${A_UGEN} ${lib} ${LO_LIB})
+        target_link_options(${A_UGEN} PRIVATE -Wl,--exclude-libs,ALL -Wl,-Bsymbolic)
+    endif()
 endfunction()
 
-nidhogg_firmware(tape
+nidhogg_firmware(tape UGEN NidhoggTape OSC_PORT 57140
     SOURCES chompi_main.cpp encoder.cpp FileStreamingManager.cpp
     LIBDAISY ui/UI.cpp hid/switch.cpp hid/midi.cpp hid/midi_parser.cpp util/color.cpp)
