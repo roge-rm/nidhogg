@@ -8,12 +8,17 @@ local saver = {}
 saver.delay = 180 -- seconds without input
 
 local last_input = util.time()
-local t0 = util.time()
 
 local SEGMENTS = 30
 local SPACING = 2.5  -- pixels between segments
 local SPEED = 9      -- pixels per second
 local LENGTH = SEGMENTS * SPACING
+-- One crossing: from the head just off the left edge to the tail off the right.
+local PASS = (128 + LENGTH + 16) / SPEED
+
+-- Each pass is followed by a random gap with nothing on screen.
+local pass_start = util.time()
+local gap = 1
 
 function saver.touch()
   last_input = util.time()
@@ -23,9 +28,50 @@ function saver.active()
   return util.time() - last_input > saver.delay
 end
 
--- Head position: crosses the 128-pixel screen, then comes back from the left.
+-- Seconds until the screensaver starts, for the mascot to get sleepy.
+function saver.remaining()
+  return saver.delay - (util.time() - last_input)
+end
+
+-- Time since the current pass began, rolling over to a new pass once the
+-- gap after it is done.
+local function pass_clock()
+  local now = util.time()
+  if not saver.active() or now - last_input - saver.delay < 0.1 then
+    -- just started: begin a pass from the left
+    pass_start = now
+  end
+  local t = now - pass_start
+  if t > PASS + gap then
+    pass_start = now
+    gap = 0.5 + math.random() * 4.5
+    t = 0
+  end
+  return t
+end
+
+-- Time into the current pass, or nil during the gap after it.
+local function pass_time()
+  local t = pass_clock()
+  if t > PASS then return nil end
+  return t
+end
+
+-- How lit the breathing top keys are, 0-1: they fade out as a gap begins and
+-- back in before the next pass.
+local function top_keys_level()
+  local t = pass_clock()
+  if t <= PASS then return 1 end
+  local into = t - PASS
+  local fade = math.min(1, gap / 2)
+  if into < fade then return 1 - into / fade end
+  if gap - into < fade then return 1 - (gap - into) / fade end
+  return 0
+end
+
+-- Head position: enters from just off the left edge.
 local function head_x(t)
-  return (t * SPEED) % (128 + LENGTH) - 8
+  return t * SPEED - 8
 end
 
 -- Body point i (0 is the head) at time t.
@@ -68,9 +114,10 @@ end
 -- Draws the dragon in the top 128x32 (the part the OMX-27 shows): a tapering
 -- body with spines along its back, a bat wing, two pairs of legs, a horned
 -- head with a gnawing jaw, and a barbed tail.
--- `t` (seconds) is for previews; normally it's the time since loading.
+-- `t` (seconds into a pass) is for previews.
 function saver.draw(t)
-  t = t or util.time() - t0
+  t = t or pass_time()
+  if not t then return end
   screen.level(15)
   screen.line_cap("round")
   screen.line_join("round")
@@ -211,9 +258,16 @@ end
 -- LED colours for the OMX-27's 27 keys while the saver runs. `color` is the
 -- bank colour, {r, g, b} 0-255.
 function saver.leds(color)
-  local t = util.time() - t0
+  local t = pass_time()
   local out = {}
   for n = 0, 26 do out[n] = {0, 0, 0} end
+  -- top keys breathe, very faintly, fading through the gaps
+  local tk = util.time()
+  local b = (0.04 + 0.04 * (0.5 + 0.5 * math.sin(tk * 2 * math.pi / 6))) * top_keys_level()
+  for n = 1, 10 do
+    out[n] = {color[1] * b, color[2] * b, color[3] * b}
+  end
+  if not t then return out end
   -- bottom keys 11-26: glow under the head, fading along the body
   for n = 11, 26 do
     local kx = (n - 11) * 8 + 4 -- key centre across the 128-pixel screen
@@ -226,11 +280,6 @@ function saver.leds(color)
       end
     end
     out[n] = {color[1] * glow, color[2] * glow, color[3] * glow}
-  end
-  -- top keys breathe, very faintly
-  local b = 0.04 + 0.04 * (0.5 + 0.5 * math.sin(t * 2 * math.pi / 6))
-  for n = 1, 10 do
-    out[n] = {color[1] * b, color[2] * b, color[3] * b}
   end
   return out
 end

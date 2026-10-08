@@ -1,6 +1,6 @@
 -- What differs between Chompi's three firmwares, for the screens and the
 -- controls: OSC port, knob and page names, shift-layer labels, the switch, and
--- each firmware's home screen. State values (s.st[1..10]) are the firmware's
+-- each firmware's status pills. State values (s.st[1..10]) are the firmware's
 -- own, in the order its board file sends them.
 
 local modes = {}
@@ -37,9 +37,20 @@ local LOOPER = {[0] = "empty", "armed", "recording", "overdub", "playing", "paus
 
 modes.tape = {
   name = "TAPE",
-  -- Chompi's panel lights: CHOMPI key, the five knobs, the transport pair,
-  -- PLAY, LOOP, in chain order (Volume is last)
-  panel = {"AUX", "PIT", "STA", "END", "MAG", "<", ">", "PLY", "LP", "VOL"},
+  knob_icons = {[0] = {"note", "gain"}, {"start", "attack"}, {"end", "release"}, {"magic", "wave", "filter"}, {"reels"}, {"volume", "mic"}},
+  title = function(s)
+    local slot = s.st[4] == 15 and "RAM" or tostring(s.st[4] or "")
+    return string.format("%s %s %s", s.st[1] == 1 and "CUBBI" or "JAMMI", BANKS[s.st[3]] or "", slot)
+  end,
+  pills = function(s)
+    local looper = s.st[8] or 0
+    return {
+      {icon = ({[0] = "mic", "line", "resample"})[s.st[5]] or "line"},
+      {text = s.st[6] == 1 and "fx>" or ">fx", dim = true},
+      {icon = ({[0] = "empty", "armed", "recdot", "recdot", "play", "pause"})[looper], on = looper == 2 or looper == 3, dim = looper == 0},
+    }
+  end,
+  playing = function(s) return s.st[8] == 3 or s.st[8] == 4 end,
   has_window = true,
   audio_recording = function(s) return s.st[9] == 1 or s.st[8] == 2 or s.st[8] == 3 end,
   port = 57140,
@@ -53,7 +64,7 @@ modes.tape = {
     [5] = {name = "VOLUME", pages = {"volume", "input gain"}, big = {"VOLUME", "INPUT"}},
   },
   shift_pots = {[0] = {"tune", "pan"}, {"move", "a + r"}, {"move", "a + r"}, {"time", "warble", "reso"}, nil, {"comp", "comp"}},
-  shift_keys = {"jammi", "cubbi", "mic", "line", "rsmp", "pre", "post", "erase", "copy", "save"},
+  shift_keys = {"jam", "cub", "mic", "line", "rsmp", "pre", "post", "erase", "copy", "save"},
   value = function(k, page, v)
     if k == 0 and page == 0 then return speed_text(pitch_speed(v)) end
     if k == 4 then return speed_text(4 * v - 2) end
@@ -77,20 +88,6 @@ modes.tape = {
   end,
   looper = function(s) return s.st[8], s.looper_pos end,
   recording = function(s) return s.st[9] == 1 end,
-  home = function(s, ui)
-    local mode, vbank, slot, input, fx_pre, looper = s.st[1], s.st[3], s.st[4], s.st[5], s.st[6] == 1, s.st[8]
-    ui.text(1, 6, string.format("%s  %s  %s", mode == 1 and "CUBBI" or "JAMMI", BANKS[vbank] or "", slot == 15 and "RAM" or tostring(slot)))
-    ui.text(1, 16, "in " .. (({[0] = "mic", "line", "resample"})[input] or ""))
-    ui.text(127, 16, fx_pre and "fx > looper" or "looper > fx", "right")
-    ui.text(1, 28, LOOPER[looper] or "")
-    if looper and looper >= 2 then ui.bar(54, 22, 73, 6, s.looper_pos or 0) end
-    if s.st[9] == 1 then ui.chip(54, 28, 46, "SAMPLING", true) end
-  end,
-  omx_home = function(s, ui)
-    local vbank, slot = s.st[3], s.st[4]
-    ui.text(0, 13, string.upper(BANKS[vbank] or "") .. " " .. (slot == 15 and "RAM" or tostring(slot)))
-    ui.looper(s.st[8], s.looper_pos)
-  end,
 }
 
 -- ---- TEMPO ----------------------------------------------------------------------
@@ -99,7 +96,17 @@ local PATTERNS = {[0] = "seq", "up", "down", "pingpong", "random"}
 
 modes.tempo = {
   name = "TEMPO",
-  panel = {"AUX", "PIT", "STA", "END", "MAG", "<", ">", "PLY", "LP", "VOL"},
+  knob_icons = {[0] = {"note", "gain", "filter"}, {"start", "attack"}, {"end", "release"}, {"delay", "magic"}, {"tempo"}, {"volume", "mic"}},
+  title = function(s)
+    return string.format("%s %d", s.st[1] == 1 and "SLICE" or "CHROMA", math.floor((s.st[5] or 320) / 2 + 0.5))
+  end,
+  pills = function(s)
+    return {
+      {text = PATTERNS[s.st[9]] or "seq", dim = not (s.st[7] and s.st[7] > 0)},
+      {icon = "latch", on = s.st[8] == 1, dim = s.st[8] ~= 1},
+    }
+  end,
+  playing = function(s) return s.st[7] and s.st[7] > 0 end,
   has_window = true,
   bpm = function(s) return math.floor((s.st[5] or 320) / 2 + 0.5) end,
   audio_recording = function(s) return s.st[4] == 1 end,
@@ -114,7 +121,7 @@ modes.tempo = {
     [5] = {name = "VOLUME", pages = {"volume", "input gain"}, big = {"VOLUME", "INPUT"}},
   },
   shift_pots = {[0] = {"tune", "pan", "redux"}, {"move", "loop"}, {"zoom", "sustain"}, {"random", "feedbk"}, nil, {"comp", "comp"}},
-  shift_keys = {"chroma", "slice", "mic", "line", "rsmp", "A", "B", "erase", "copy", "save"},
+  shift_keys = {"chro", "slice", "mic", "line", "rsmp", "A", "B", "erase", "copy", "save"},
   value = function(k, page, v, s)
     if k == 0 and page == 0 then return speed_text(pitch_speed(v)) end
     if k == 0 and page == 2 then return bipolar(v, "low", "high") end
@@ -130,28 +137,24 @@ modes.tempo = {
   bank_color_slot = function(s) return 0 end,
   looper = function(s) return nil end,
   recording = function(s) return s.st[4] == 1 end,
-  home = function(s, ui)
-    local engine, tempo, clock, play, latch, pattern = s.st[1], s.st[5], s.st[6], s.st[7], s.st[8] == 1, s.st[9]
-    ui.text(1, 6, engine == 1 and "SLICE" or "CHROMATIC")
-    ui.text(1, 16, string.format("%d bpm %s", math.floor((tempo or 320) / 2 + 0.5), clock == 1 and "sync" or "free"))
-    ui.text(127, 16, PATTERNS[pattern] or "", "right")
-    ui.text(1, 28, (play and play > 0) and "playing" or "stopped")
-    if latch then ui.chip(54, 28, 30, "LATCH", true) end
-    if s.st[4] == 1 then ui.chip(88, 28, 39, "SAMPLE", true) end
-  end,
-  omx_home = function(s, ui)
-    ui.text(0, 13, s.st[1] == 1 and "SLICE" or "CHROMA")
-    ui.text(127, 13, tostring(math.floor((s.st[5] or 320) / 2 + 0.5)), "right")
-    ui.text(0, 30, (s.st[7] and s.st[7] > 0) and "PLAY" or "STOP")
-    if s.st[8] == 1 then ui.text(127, 30, "LATCH", "right") end
-  end,
 }
 
 -- ---- WAVE ----------------------------------------------------------------------
 
 modes.wave = {
   name = "WAVE",
-  panel = {"AUX", "PIT", "ATK", "REL", "FX", "<", ">", "PLY", "LP", "GN"},
+  knob_icons = {[0] = {"note", "wave"}, {"attack", "note"}, {"release", "filter"}, {"magic", "filter"}, {"tempo"}, {"gain", "volume"}},
+  title = function(s)
+    return string.format("%s %d", s.st[1] == 15 and "INIT" or ("P" .. (s.st[1] or 0)), math.floor((s.st[2] or 320) / 2 + 0.5))
+  end,
+  pills = function(s)
+    local o = s.st[5] or 0
+    return {
+      {text = "oct " .. (o > 0 and "+" or "") .. o, dim = o == 0},
+      {icon = "recdot", on = s.st[4] == 1, dim = s.st[4] ~= 1},
+    }
+  end,
+  playing = function(s) return s.st[3] == 1 end,
   bpm = function(s) return math.floor((s.st[2] or 320) / 2 + 0.5) end,
   port = 57142,
   switch = {"SHIFT", "PERF"},
@@ -164,7 +167,7 @@ modes.wave = {
     [5] = {name = "GAIN", pages = {"gain", "pan"}, big = {"GAIN", "PAN"}},
   },
   shift_pots = {[0] = {"semis", "table"}, {"attack", "p rate"}, {"release", "f rate"}, {"time", "reso"}, nil, {"comp", "comp"}},
-  shift_keys = {"oct -", "oct +", "gate 10", "50", "100", "p lfo", "f lfo", "erase", "copy", "save"},
+  shift_keys = {"oct-", "oct+", "g 10", "g 50", "g100", "plfo", "flfo", "erase", "copy", "save"},
   value = function(k, page, v, s)
     if k == 0 and page == 1 then return tostring(s.st[6] or 0) end
     if k == 3 and page == 0 then return bipolar(v, "delay", "verb") end
@@ -186,21 +189,6 @@ modes.wave = {
   bank_color_slot = function(s) return 0 end,
   looper = function(s) return nil end,
   recording = function(s) return s.st[4] == 1 end,
-  home = function(s, ui)
-    local slot, tempo, playing, rec = s.st[1], s.st[2], s.st[3] == 1, s.st[4] == 1
-    ui.text(1, 6, string.format("preset %s", slot == 15 and "default" or tostring(slot)))
-    ui.text(127, 6, string.format("table %d", (s.st[7] or 0) + 1), "right")
-    ui.text(1, 16, string.format("%d bpm", math.floor((tempo or 320) / 2 + 0.5)))
-    ui.text(127, 16, string.format("oct %s%d", (s.st[5] or 0) > 0 and "+" or "", s.st[5] or 0), "right")
-    ui.text(1, 28, playing and "seq playing" or "seq stopped")
-    if rec then ui.chip(88, 28, 39, "REC", true) end
-  end,
-  omx_home = function(s, ui)
-    ui.text(0, 13, "P " .. (s.st[1] == 15 and "--" or tostring(s.st[1] or 0)))
-    ui.text(127, 13, tostring(math.floor((s.st[2] or 320) / 2 + 0.5)), "right")
-    ui.text(0, 30, s.st[3] == 1 and "PLAY" or "STOP")
-    if s.st[4] == 1 then ui.text(127, 30, "REC", "right") end
-  end,
 }
 
 modes.order = {"tape", "tempo", "wave"}

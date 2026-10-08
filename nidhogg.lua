@@ -365,7 +365,17 @@ end
 
 function osc.event(path, args, from)
   if path == "/leds" then
-    leds = args[1]
+    -- a key light turning white is a note starting: the dragon chomps
+    local new = args[1]
+    for i = 10, 34 do
+      local was = leds:byte(i * 3 + 1) or 0
+      local now = new:byte(i * 3 + 1) or 0
+      if now > 200 and was <= 200 and (new:byte(i * 3 + 2) or 0) > 200 then
+        view.mascot.note()
+        break
+      end
+    end
+    leds = new
   elseif path == "/knob" then
     local k = args[1]
     local changed = s.knob_page[k] ~= nil
@@ -453,8 +463,9 @@ function redraw()
     view.omx(s, M)
     omx.screen_send(0, 0)
     screen.clear()
-    view.info(s, M)
-    view.panel(leds, M)
+    local left = saver.remaining()
+    local sleepy = left < 20 and util.clamp(1 - left / 20, 0, 1) or 0
+    view.norns(s, M, leds, sleepy)
   end
   screen.update()
 end

@@ -218,114 +218,257 @@ function view.omx(s, M)
 end
 
 -- ---- norns screen --------------------------------------------------------------
+--
+-- A little Chompi panel: the baby dragon and status pills on top, six round
+-- knobs whose rings glow like Chompi's knob lights, and a rounded keyboard
+-- lit like Chompi's keys. Turning a knob zooms it; holding AUX shows the shift
+-- jobs.
 
-local function draw_shift(s, M)
-  screen.level(15)
-  text(1, 6, "SHIFT  " .. M.name)
-  text(127, 6, M.shift_title(s), "right")
-  for i = 1, 10 do
-    local col = (i - 1) % 5
-    chip(col * 25, i <= 5 and 15 or 24, 26, M.shift_keys[i], M.shift_on(s, i))
-  end
-  local x = 0
-  for _, k in ipairs({0, 1, 2, 3, 5}) do
-    local labels = M.shift_pots[k]
-    if labels then
-      text(x + 12, 32, labels[(s.knob_page[k] or 0) + 1] or labels[1], "center")
-    end
-    x = x + 25
-  end
-end
-
-local function draw_knob(s, M, k)
-  local knob = M.knobs[k]
-  local page = s.knob_page[k] or 0
-  local v = s.knob_value[k] or 0
-  screen.level(15)
-  text(1, 6, knob.name)
-  text(127, 6, M.value(k, page, v, s), "right")
-  bar(0, 10, 127, 8, v)
-  if M.middle_mark(k, page) then
-    screen.level(0)
-    screen.rect(63, 11, 1, 7)
-    screen.fill()
-    screen.level(15)
-    screen.rect(63, 19, 1, 2)
-    screen.fill()
-  end
-  for p = 1, #knob.pages do
-    screen.rect(2 + (p - 1) * 6, 25, 3, 3)
-    if p == page + 1 then screen.fill() else screen.stroke() end
-  end
-  text(24, 30, knob.pages[page + 1] or "")
-  local pot = s.pot[k]
-  if pot and not s.picked[k] and k ~= 4 then
-    local x = math.floor(pot * 126 + 1.5)
-    screen.move(x - 2, 23)
-    screen.line(x + 2, 23)
-    screen.line(x, 20)
-    screen.close()
-    screen.fill()
-    text(127, 30, pot < v and "sweep >" or "< sweep", "right")
-  end
-end
-
--- The top 128x32 of the norns screen: the details.
-function view.info(s, M)
-  if s.menu then
-    draw_shift(s, M)
-  elseif knob_active(s) then
-    draw_knob(s, M, s.focus)
-  else
-    screen.level(15)
-    M.home(s, ui)
-    local label = s.record_switch and M.switch[2] or M.switch[1]
-    if M.name == "TAPE" then
-      chip(102, 6, 26, label, s.record_switch)
-    else
-      chip(96, 28, 32, label, s.record_switch)
-    end
-  end
-end
-
--- Chompi's panel lights, from the 105-byte LED string: 10 panel lights, then
--- 25 key lights in Chompi's chain order. The panel lights are drawn as short
--- labels, each as bright as its light, since there's no silkscreen to say
--- which is which.
--- {x, baseline} for each light: AUX and the first four knobs on the top row,
--- the transport pair, PLAY, LOOP and Volume below.
-local PANEL_POS = {
-  [0] = {0, 37}, {26, 37}, {52, 37}, {78, 37}, {104, 37},
-  {0, 43}, {9, 43}, {26, 43}, {52, 43}, {78, 43},
-}
-
--- Black keys sit after these white keys.
-local BLACK_AFTER = {1, 2, 4, 5, 6, 8, 9, 11, 12, 13}
+local icons = include("lib/icons")
+local mascot = include("lib/mascot")
+view.mascot = mascot
 
 local function level_of(leds, i)
   local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
   return math.floor(math.max(r or 0, g or 0, b or 0) / 17)
 end
 
-function view.panel(leds, M)
+local function lit_white(leds, i)
+  local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
+  return (r or 0) > 200 and (g or 0) > 200 and (b or 0) > 200
+end
+
+local function width_of(str)
+  return (screen.text_extents(str))
+end
+
+-- A rounded box: a rectangle with its corner pixels left out.
+local function rounded(x, y, w, h, fill_level, edge_level)
+  if fill_level then
+    screen.level(fill_level)
+    screen.rect(x + 1, y, w - 2, h)
+    screen.rect(x, y + 1, 1, h - 2)
+    screen.rect(x + w - 1, y + 1, 1, h - 2)
+    screen.fill()
+  end
+  if edge_level then
+    screen.level(edge_level)
+    screen.rect(x + 1, y, w - 2, 1)
+    screen.rect(x + 1, y + h - 1, w - 2, 1)
+    screen.rect(x, y + 1, 1, h - 2)
+    screen.rect(x + w - 1, y + 1, 1, h - 2)
+    screen.fill()
+  end
+end
+
+-- A pill with text and/or an icon. Returns its width. `on` fills it.
+local function pill(x, y, item)
+  local tw = item.text and width_of(item.text) or 0
+  local iw = item.icon and 7 or 0
+  local w = tw + iw + (item.text and item.icon and 2 or 0) + 6
+  local on = item.on
+  rounded(x, y, w, 9, on and 15 or nil, on and nil or (item.dim and 4 or 8))
+  local ink = on and 0 or (item.dim and 6 or 15)
+  local cx = x + 3
+  if item.icon then
+    icons.draw(item.icon, cx, y + 2, ink)
+    cx = cx + 9
+  end
+  if item.text then
+    screen.level(ink)
+    screen.move(cx, y + 7)
+    screen.text(item.text)
+  end
+  return w
+end
+
+-- Knob centres along the knob row, and the panel light that rings each.
+local KNOB_X = {[0] = 10, 30, 50, 70, 90, 110}
+local KNOB_Y = 29
+local RING = {[0] = 1, 2, 3, 4, nil, 9}
+
+local function pointer(cx, cy, r, v, level)
+  local a = math.rad(-135 + 270 * v) - math.pi / 2
+  screen.level(level)
+  screen.move(cx, cy)
+  screen.line(cx + math.cos(a) * r, cy + math.sin(a) * r)
+  screen.stroke()
+end
+
+local function knob(k, s, M, leds)
+  local cx, cy = KNOB_X[k], KNOB_Y
+  local v = s.knob_value[k] or 0
+  -- the glow ring: Chompi's knob light, or the transport pair as two halves
+  if k == 4 then
+    screen.level(math.max(1, level_of(leds, 5)))
+    screen.arc(cx, cy, 8, math.pi * 0.5, math.pi * 1.5)
+    screen.stroke()
+    screen.level(math.max(1, level_of(leds, 6)))
+    screen.arc(cx, cy, 8, math.pi * 1.5, math.pi * 2.5)
+    screen.stroke()
+  else
+    screen.level(math.max(1, level_of(leds, RING[k])))
+    screen.circle(cx, cy, 8)
+    screen.stroke()
+  end
+  -- the cap
+  screen.level(3)
+  screen.circle(cx, cy, 5.5)
+  screen.fill()
+  pointer(cx, cy, 5, v, 15)
+  -- page pip
+  local page = s.knob_page[k] or 0
+  if page > 0 then
+    screen.level(15)
+    screen.rect(cx + 6, cy + 6, 2, 2 * page)
+    screen.fill()
+  end
+  icons.draw(M.knob_icons[k][page + 1] or M.knob_icons[k][1], cx - 3, 39, 10)
+end
+
+local function zoomed_knob(k, s, M, leds)
+  local knob_t = M.knobs[k]
+  local page = s.knob_page[k] or 0
+  local v = s.knob_value[k] or 0
+  local cx, cy = 14, 31
+  local glow = k == 4 and math.max(level_of(leds, 5), level_of(leds, 6)) or level_of(leds, RING[k])
+  screen.level(math.max(2, glow))
+  screen.circle(cx, cy, 12)
+  screen.stroke()
+  screen.level(3)
+  screen.circle(cx, cy, 9)
+  screen.fill()
+  pointer(cx, cy, 9, v, 15)
+  local pot = s.pot[k]
+  if pot and not s.picked[k] and k ~= 4 then
+    -- where the pot is: a dot on the ring
+    local a = math.rad(-135 + 270 * pot) - math.pi / 2
+    screen.level(15)
+    screen.circle(cx + math.cos(a) * 12, cy + math.sin(a) * 12, 1.5)
+    screen.fill()
+  end
   screen.font_face(1)
   screen.font_size(8)
-  for i = 0, 9 do
-    screen.level(math.max(2, level_of(leds, i)))
-    text(PANEL_POS[i][1], PANEL_POS[i][2], M.panel[i + 1])
+  screen.level(8)
+  screen.move(32, 26)
+  screen.text(knob_t.name)
+  screen.font_size(16)
+  screen.level(15)
+  screen.move(32, 40)
+  screen.text(M.value(k, page, v, s))
+  screen.font_size(8)
+  -- page dots and name
+  for p = 1, #knob_t.pages do
+    screen.level(p == page + 1 and 15 or 4)
+    screen.rect(120 - (#knob_t.pages - p) * 5, 21, 3, 3)
+    screen.fill()
   end
+  screen.level(8)
+  screen.move(127, 31)
+  screen.text_right(knob_t.pages[page + 1] or "")
+end
+
+-- Shift: the ten jobs on the top keys, grouped like the keys (2-3, 2-3).
+local function shift_chips(s, M)
+  screen.font_face(1)
+  screen.font_size(8)
+  local slots = {{0, 22}, {25, 22}, {53, 22}, {78, 22}, {103, 22},
+                 {0, 33}, {25, 33}, {53, 33}, {78, 33}, {103, 33}}
+  for i = 1, 10 do
+    local x, y = slots[i][1], slots[i][2]
+    local on = M.shift_on(s, i)
+    rounded(x, y, 24, 10, on and 15 or nil, on and nil or 6)
+    screen.level(on and 0 or 15)
+    screen.move(x + 12, y + 7)
+    screen.text_center(M.shift_keys[i])
+  end
+end
+
+-- Black keys sit after these white keys.
+local BLACK_AFTER = {1, 2, 4, 5, 6, 8, 9, 11, 12, 13}
+
+local function keyboard(leds)
   -- white keys 1-15 use key lights 24 down to 10
   for w = 1, 15 do
-    screen.level(math.max(1, level_of(leds, 10 + 25 - w)))
-    screen.rect(4 + (w - 1) * 8, 54, 7, 10)
-    screen.fill()
+    local i = 10 + 25 - w
+    local lvl = level_of(leds, i)
+    local down = lit_white(leds, i) and 1 or 0
+    local x = 4 + (w - 1) * 8
+    rounded(x, 46 + down, 7, 18 - down, math.max(2, lvl), nil)
   end
   -- black keys 1-10 use key lights 0-9
   for b = 1, 10 do
-    screen.level(math.max(1, level_of(leds, 10 + b - 1)))
-    screen.rect(4 + BLACK_AFTER[b] * 8 - 3, 45, 6, 7)
+    local i = 10 + b - 1
+    local lvl = level_of(leds, i)
+    local down = lit_white(leds, i) and 1 or 0
+    local x = 4 + BLACK_AFTER[b] * 8 - 3
+    screen.level(0)
+    screen.rect(x - 1, 45, 7, 11)
     screen.fill()
+    rounded(x, 45 + down, 5, 10, math.max(1, lvl), nil)
   end
+end
+
+-- The norns screen.
+function view.norns(s, M, leds, sleepy)
+  screen.font_face(1)
+  screen.font_size(8)
+
+  -- the dragon
+  local ticks = s.ticks or 0
+  mascot.draw(0, 0, {
+    recording = M.audio_recording and M.audio_recording(s),
+    playing = M.playing and M.playing(s),
+    beat = (ticks % 24) / 24,
+    sleepy = sleepy,
+    belly = level_of(leds, 0),
+  })
+
+  -- top row: firmware, what's loaded, the switch
+  local x = 26
+  if s.menu then
+    -- a speech bubble from the dragon
+    rounded(26, 1, 40, 10, 15, nil)
+    screen.level(15)
+    screen.move(24, 7)
+    screen.line(27, 5)
+    screen.line(27, 9)
+    screen.close()
+    screen.fill()
+    screen.level(0)
+    screen.move(46, 8)
+    screen.text_center("SHIFT")
+    screen.level(15)
+    screen.move(127, 8)
+    screen.text_right(M.shift_title(s))
+  else
+    pill(x, 1, {text = M.title(s)})
+    local sw = s.record_switch and M.switch[2] or M.switch[1]
+    local w = width_of(sw) + 6
+    pill(127 - w, 1, {text = sw, on = s.record_switch})
+    -- second row: the firmware, details as far as they fit, then the PLAY and
+    -- LOOP lights
+    x = 26
+    x = x + pill(x, 11, {text = M.name, on = true, small = true}) + 2
+    for _, item in ipairs(M.pills(s)) do
+      local tw = (item.text and width_of(item.text) or 0) + (item.icon and 7 or 0) + 6
+      if x + tw > 105 then break end
+      x = x + pill(x, 11, item) + 2
+    end
+    icons.draw("play", 108, 13, math.max(2, level_of(leds, 7)))
+    icons.draw("loop", 119, 13, math.max(2, level_of(leds, 8)))
+  end
+
+  -- middle: knobs, one knob up close, or the shift jobs
+  if s.menu then
+    shift_chips(s, M)
+  elseif knob_active(s) then
+    zoomed_knob(s.focus, s, M, leds)
+  else
+    for k = 0, 5 do knob(k, s, M, leds) end
+  end
+
+  keyboard(leds)
 end
 
 return view
