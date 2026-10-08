@@ -289,12 +289,16 @@ function view.info(s, M)
 end
 
 -- Chompi's panel lights, from the 105-byte LED string: 10 panel lights, then
--- 25 key lights in Chompi's chain order.
-local PANEL = {
-  -- {light, x}: CHOMPI, Pitch, Start, End, Magic, Transport left/right, PLAY,
-  -- LOOP, Volume
-  {0, 6}, {1, 22}, {2, 34}, {3, 46}, {4, 58}, {5, 74}, {6, 80}, {7, 96}, {8, 108}, {9, 122},
+-- 25 key lights in Chompi's chain order. The panel lights are drawn as short
+-- labels, each as bright as its light, since there's no silkscreen to say
+-- which is which.
+-- {x, baseline} for each light: AUX and the first four knobs on the top row,
+-- the transport pair, PLAY, LOOP and Volume below.
+local PANEL_POS = {
+  [0] = {0, 37}, {26, 37}, {52, 37}, {78, 37}, {104, 37},
+  {0, 43}, {9, 43}, {26, 43}, {52, 43}, {78, 43},
 }
+
 -- Black keys sit after these white keys.
 local BLACK_AFTER = {1, 2, 4, 5, 6, 8, 9, 11, 12, 13}
 
@@ -303,11 +307,12 @@ local function level_of(leds, i)
   return math.floor(math.max(r or 0, g or 0, b or 0) / 17)
 end
 
-function view.panel(leds)
-  for _, p in ipairs(PANEL) do
-    screen.level(math.max(1, level_of(leds, p[1])))
-    screen.circle(p[2], 38, 2.5)
-    screen.fill()
+function view.panel(leds, M)
+  screen.font_face(1)
+  screen.font_size(8)
+  for i = 0, 9 do
+    screen.level(math.max(2, level_of(leds, i)))
+    text(PANEL_POS[i][1], PANEL_POS[i][2], M.panel[i + 1])
   end
   -- white keys 1-15 use key lights 24 down to 10
   for w = 1, 15 do

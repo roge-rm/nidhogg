@@ -454,7 +454,7 @@ function redraw()
     omx.screen_send(0, 0)
     screen.clear()
     view.info(s, M)
-    view.panel(leds)
+    view.panel(leds, M)
   end
   screen.update()
 end

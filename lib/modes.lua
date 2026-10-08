@@ -37,6 +37,9 @@ local LOOPER = {[0] = "empty", "armed", "recording", "overdub", "playing", "paus
 
 modes.tape = {
   name = "TAPE",
+  -- Chompi's panel lights: CHOMPI key, the five knobs, the transport pair,
+  -- PLAY, LOOP, in chain order (Volume is last)
+  panel = {"AUX", "PIT", "STA", "END", "MAG", "<", ">", "PLY", "LP", "VOL"},
   has_window = true,
   audio_recording = function(s) return s.st[9] == 1 or s.st[8] == 2 or s.st[8] == 3 end,
   port = 57140,
@@ -96,6 +99,7 @@ local PATTERNS = {[0] = "seq", "up", "down", "pingpong", "random"}
 
 modes.tempo = {
   name = "TEMPO",
+  panel = {"AUX", "PIT", "STA", "END", "MAG", "<", ">", "PLY", "LP", "VOL"},
   has_window = true,
   bpm = function(s) return math.floor((s.st[5] or 320) / 2 + 0.5) end,
   audio_recording = function(s) return s.st[4] == 1 end,
@@ -147,6 +151,7 @@ modes.tempo = {
 
 modes.wave = {
   name = "WAVE",
+  panel = {"AUX", "PIT", "ATK", "REL", "FX", "<", ">", "PLY", "LP", "GN"},
   bpm = function(s) return math.floor((s.st[2] or 320) / 2 + 0.5) end,
   port = 57142,
   switch = {"SHIFT", "PERF"},

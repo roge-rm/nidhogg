@@ -34,29 +34,52 @@ double now_s()
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-int on_key(const char*, const char*, lo_arg** a, int, lo_message, void*)
+// norns sends every Lua number as a float, and liblo's own conversion turns a
+// negative float into 0 for an int argument, so read numbers by their type.
+double num(const char* types, lo_arg** a, int i)
 {
-    board::key(a[0]->i, a[1]->i != 0);
+    switch(types[i])
+    {
+        case 'i': return a[i]->i;
+        case 'h': return double(a[i]->h);
+        case 'f': return a[i]->f;
+        case 'd': return a[i]->d;
+        default: return 0;
+    }
+}
+int inum(const char* types, lo_arg** a, int i)
+{
+    return int(std::lround(num(types, a, i)));
+}
+
+int on_key(const char*, const char* t, lo_arg** a, int argc, lo_message, void*)
+{
+    if(argc >= 2)
+        board::key(inum(t, a, 0), inum(t, a, 1) != 0);
     return 0;
 }
-int on_turn(const char*, const char*, lo_arg** a, int, lo_message, void*)
+int on_turn(const char*, const char* t, lo_arg** a, int argc, lo_message, void*)
 {
-    board::turn(a[0]->i, a[1]->i);
+    if(argc >= 2)
+        board::turn(inum(t, a, 0), inum(t, a, 1));
     return 0;
 }
-int on_push(const char*, const char*, lo_arg** a, int, lo_message, void*)
+int on_push(const char*, const char* t, lo_arg** a, int argc, lo_message, void*)
 {
-    board::push(a[0]->i, a[1]->i != 0);
+    if(argc >= 2)
+        board::push(inum(t, a, 0), inum(t, a, 1) != 0);
     return 0;
 }
-int on_pot(const char*, const char*, lo_arg** a, int, lo_message, void*)
+int on_pot(const char*, const char* t, lo_arg** a, int argc, lo_message, void*)
 {
-    board::pot(a[0]->i, a[1]->f);
+    if(argc >= 2)
+        board::pot(inum(t, a, 0), float(num(t, a, 1)));
     return 0;
 }
-int on_switch(const char*, const char*, lo_arg** a, int, lo_message, void*)
+int on_switch(const char*, const char* t, lo_arg** a, int argc, lo_message, void*)
 {
-    board::set_switch(a[0]->i != 0);
+    if(argc >= 1)
+        board::set_switch(inum(t, a, 0) != 0);
     return 0;
 }
 // /midi s:port then either one blob or the bytes as ints (Lua can't send blobs).
@@ -74,8 +97,7 @@ int on_midi(const char*, const char* types, lo_arg** a, int argc, lo_message, vo
         return 0;
     }
     for(int i = 1; i < argc && n < sizeof(bytes); i++)
-        if(types[i] == 'i')
-            bytes[n++] = uint8_t(a[i]->i);
+        bytes[n++] = uint8_t(inum(types, a, i));
     vhw::midi_in(port, bytes, n);
     return 0;
 }
@@ -186,11 +208,11 @@ bool start(const std::string& port, const std::string& reply)
     osc = lo_server_thread_new(port.c_str(), nullptr);
     if(!osc)
         return false;
-    lo_server_thread_add_method(osc, "/key", "ii", on_key, nullptr);
-    lo_server_thread_add_method(osc, "/turn", "ii", on_turn, nullptr);
-    lo_server_thread_add_method(osc, "/push", "ii", on_push, nullptr);
-    lo_server_thread_add_method(osc, "/switch", "i", on_switch, nullptr);
-    lo_server_thread_add_method(osc, "/pot", "if", on_pot, nullptr);
+    lo_server_thread_add_method(osc, "/key", nullptr, on_key, nullptr);
+    lo_server_thread_add_method(osc, "/turn", nullptr, on_turn, nullptr);
+    lo_server_thread_add_method(osc, "/push", nullptr, on_push, nullptr);
+    lo_server_thread_add_method(osc, "/switch", nullptr, on_switch, nullptr);
+    lo_server_thread_add_method(osc, "/pot", nullptr, on_pot, nullptr);
     lo_server_thread_add_method(osc, "/midi", nullptr, on_midi, nullptr);
     lo_server_thread_add_method(osc, "/ping", "", on_ping, nullptr);
     lo_server_thread_add_method(osc, "/quit", "", on_quit, nullptr);
