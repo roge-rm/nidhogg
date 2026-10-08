@@ -7,6 +7,8 @@
 //     1.5:key:15:1      key (Hardware::SwId) down, :0 for up
 //     2:turn:3:+10      encoder 0-5 (SW1-SW6) by detents
 //     2:push:3:1        encoder push down/up
+//     2:pot:1:0.5       absolute pot for knob 0-5 (Pitch Start End Magic
+//                       Transport Volume)
 //     0:switch:rec      Play/Record switch (rec|play)
 //     3:midi:usb:903c7f MIDI bytes in (trs|usb), hex
 //     4:leds            print the LEDs
@@ -64,6 +66,8 @@ void apply(const Event& e)
         board::turn(std::atoi(a.c_str()), std::atoi(b.c_str()));
     else if(e.what == "push")
         board::push(std::atoi(a.c_str()), std::atoi(b.c_str()) != 0);
+    else if(e.what == "pot")
+        board::pot(std::atoi(a.c_str()), float(std::atof(b.c_str())));
     else if(e.what == "switch")
         board::set_switch(a == "rec");
     else if(e.what == "midi")

@@ -1,0 +1,34 @@
+--- a/ui.h
++++ b/ui.h
+@@ -456,6 +456,13 @@
+     TestPage test_page_;
+     NoSDPage no_sd_page_;
+     RainbowPage rainbow_page_;
++#ifdef NIDHOGG_HOST
++    // Knob access for nidhogg's absolute pots. Call from the audio callback,
++    // like GenerateEvents.
++    float HostKnobValue(int knob) const { return enc_values[knob_page[knob]][knob]; }
++    int HostKnobPage(int knob) const { return knob_page[knob]; }
++    void HostTurn(int knob, int turns) { event_queue.AddEncoderTurned(knob, turns, 0); }
++#endif
+     private:
+         daisy::UiEventQueue event_queue;
+         daisy::UI ui;
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -418,4 +418,13 @@
+     {
+         MainLoop(nullptr);
+     }
+-}
+\ No newline at end of file
++}
++
++#ifdef NIDHOGG_HOST
++// For the host's board code, called in the audio context.
++float nidhogg_knob_value(int knob) { return ui.HostKnobValue(knob); }
++int nidhogg_knob_page(int knob) { return ui.HostKnobPage(knob); }
++bool nidhogg_menu_active() { return ui.menu_page_.IsActive(); }
++bool nidhogg_pitch_quantized() { return !options.pitch_shift_quantization; }
++void nidhogg_turn(int knob, int turns) { ui.HostTurn(knob, turns); }
++#endif

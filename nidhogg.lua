@@ -5,6 +5,8 @@
 -- OMX-27 in REMOTE mode: keys,
 -- AUX = CHOMPI, encoder = transport,
 -- pots = pitch start end magic volume
+-- (a pot takes over once it passes
+-- the knob's value)
 -- K2 play, K3 loop
 -- E1 play/record switch
 -- E2 transport, E3 volume
@@ -28,10 +30,8 @@ local OMX_TO_SW = {
   [19] = 18, [20] = 19, [21] = 20, [22] = 24, [23] = 25, [24] = 26, [25] = 27,
   [26] = 28,
 }
--- OMX pot -> hardware encoder: pitch SW4, start SW1, end SW2, magic SW3,
--- volume SW6
-local POT_TO_ENC = {[0] = 3, 0, 1, 2, 5}
-local pot_last = {}
+-- OMX pot -> Chompi knob: Pitch 0, Start 1, End 2, Magic 3, Volume 5
+local POT_TO_KNOB = {[0] = 0, 1, 2, 3, 5}
 
 -- Chompi key LED (0-24) for an OMX key, and AUX shows the CHOMPI LED.
 local function omx_led_source(n)
@@ -66,12 +66,8 @@ function init()
   end
   omx.enc = function(d) send("/turn", {ENC.TRANSPORT, d}) end
   omx.enc_btn = function(z) send("/push", {ENC.TRANSPORT, z}) end
-  omx.pot = function(n, v)
-    if pot_last[n] then
-      local d = v - pot_last[n]
-      if d ~= 0 then send("/turn", {POT_TO_ENC[n], d}) end
-    end
-    pot_last[n] = v
+  omx.pot = function(n, v, hires)
+    send("/pot", {POT_TO_KNOB[n], hires / 16383})
   end
   omx.connect()
 

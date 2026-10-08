@@ -47,6 +47,11 @@ int on_push(const char*, const char*, lo_arg** a, int, lo_message, void*)
     board::push(a[0]->i, a[1]->i != 0);
     return 0;
 }
+int on_pot(const char*, const char*, lo_arg** a, int, lo_message, void*)
+{
+    board::pot(a[0]->i, a[1]->f);
+    return 0;
+}
 int on_switch(const char*, const char*, lo_arg** a, int, lo_message, void*)
 {
     board::set_switch(a[0]->i != 0);
@@ -133,6 +138,7 @@ bool start(const std::string& port, const std::string& reply)
     lo_server_thread_add_method(osc, "/turn", "ii", on_turn, nullptr);
     lo_server_thread_add_method(osc, "/push", "ii", on_push, nullptr);
     lo_server_thread_add_method(osc, "/switch", "i", on_switch, nullptr);
+    lo_server_thread_add_method(osc, "/pot", "if", on_pot, nullptr);
     lo_server_thread_add_method(osc, "/midi", nullptr, on_midi, nullptr);
     lo_server_thread_add_method(osc, "/ping", "", on_ping, nullptr);
     lo_server_thread_add_method(osc, "/quit", "", on_quit, nullptr);

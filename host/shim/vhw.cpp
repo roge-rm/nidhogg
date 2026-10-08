@@ -55,6 +55,7 @@ PinSlot pins_[11][16];
 
 // audio
 std::atomic<AudioCallback> audio_cb_{nullptr};
+void (*pre_audio_)() = nullptr;
 
 // timers
 struct Timer
@@ -269,6 +270,11 @@ void set_audio_callback(AudioCallback cb)
     audio_cb_ = cb;
 }
 
+void set_pre_audio_hook(void (*hook)())
+{
+    pre_audio_ = hook;
+}
+
 bool audio_running()
 {
     return audio_cb_ != nullptr;
@@ -372,6 +378,8 @@ void audio_block(const float* const* in, float** out)
     if(cfg_.mode == Mode::Lockstep)
         run_timers(t);
     AudioCallback cb = audio_cb_;
+    if(cb && pre_audio_)
+        pre_audio_();
     if(cb)
         cb(in, out, kBlockSize);
     else

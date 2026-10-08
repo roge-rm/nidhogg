@@ -20,6 +20,9 @@ void key(int sw_id, bool down);
 void turn(int encoder, int detents);
 void push(int encoder, bool down);
 void set_switch(bool record);
+// An absolute pot for logical knob 0-5 (Pitch, Start, End, Magic, Transport,
+// Volume), value 0-1.
+void pot(int knob, float value);
 Leds leds();
 
 } // namespace board

@@ -58,6 +58,9 @@ void pin_write(int port, int pin, bool level);
 
 using AudioCallback = void (*)(const float* const* in, float** out, size_t size);
 void set_audio_callback(AudioCallback cb);
+// Runs in the audio context just before each firmware audio callback, where
+// the firmware scans its own controls.
+void set_pre_audio_hook(void (*hook)());
 bool audio_running();
 
 // ---- timers -----------------------------------------------------------------

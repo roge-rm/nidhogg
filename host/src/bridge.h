@@ -4,6 +4,7 @@
 // In (UDP, `port`):
 //   /key i:sw_id i:down        /turn i:encoder i:detents
 //   /push i:encoder i:down     /switch i:record
+//   /pot i:knob f:value        absolute pot, knob 0-5 as Chompi numbers them
 //   /midi s:"trs"|"usb" then b:bytes or i:byte...
 //   /ping   /quit
 // Out (to `reply` on localhost):
