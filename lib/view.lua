@@ -283,8 +283,10 @@ local function pill(x, y, item)
 end
 
 -- Knob centres along the knob row, and the panel light that rings each.
-local KNOB_X = {[0] = 10, 30, 50, 70, 90, 110}
-local KNOB_Y = 29
+-- Centres sit on half pixels so circles land on whole pixels and a 7-pixel
+-- icon centres under them; six knobs 21 apart leave 3 pixels each side.
+local KNOB_X = {[0] = 11.5, 32.5, 53.5, 74.5, 95.5, 116.5}
+local KNOB_Y = 29.5
 local RING = {[0] = 1, 2, 3, 4, nil, 9}
 
 local function pointer(cx, cy, r, v, level)
@@ -320,17 +322,17 @@ local function knob(k, s, M, leds)
   local page = s.knob_page[k] or 0
   if page > 0 then
     screen.level(15)
-    screen.rect(cx + 6, cy + 6, 2, 2 * page)
+    screen.rect(cx + 5.5, cy + 5.5, 2, 2 * page)
     screen.fill()
   end
-  icons.draw(M.knob_icons[k][page + 1] or M.knob_icons[k][1], cx - 3, 39, 10)
+  icons.draw(M.knob_icons[k][page + 1] or M.knob_icons[k][1], cx - 3.5, 39, 10)
 end
 
 local function zoomed_knob(k, s, M, leds)
   local knob_t = M.knobs[k]
   local page = s.knob_page[k] or 0
   local v = s.knob_value[k] or 0
-  local cx, cy = 14, 31
+  local cx, cy = 14.5, 31.5
   local glow = k == 4 and math.max(level_of(leds, 5), level_of(leds, 6)) or level_of(leds, RING[k])
   screen.level(math.max(2, glow))
   screen.circle(cx, cy, 12)
