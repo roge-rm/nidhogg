@@ -116,8 +116,16 @@ void start(const Config& cfg, int (*firmware_main)());
 // in/out are 4 channels each (Daisy: mic, unused, line L, line R in;
 // headphone L/R, line L/R out).
 void audio_block(const float* const* in, float** out);
-// The audio callback must also hold the irq lock; the host calls these around it
-// when it drives audio itself.
 void stop();
+
+// Time spent in the firmware's audio callback and in timer callbacks, per
+// block, in microseconds. A block lasts kBlockUs.
+struct Load
+{
+    double   audio_avg_us, audio_max_us;
+    double   timers_avg_us, timers_max_us;
+    uint64_t blocks;
+};
+Load load();
 
 } // namespace vhw

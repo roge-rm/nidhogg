@@ -10,6 +10,7 @@
 #include <deque>
 #include <mutex>
 #include <thread>
+#include <algorithm>
 
 namespace vhw
 {
@@ -83,6 +84,17 @@ struct MidiState
 MidiState midi_[2];
 
 std::string card_root_ = ".";
+
+// load measurement
+double   audio_sum_ = 0, audio_max_ = 0, timers_sum_ = 0, timers_max_ = 0;
+uint64_t load_blocks_ = 0;
+
+double mono_us()
+{
+    return std::chrono::duration<double, std::micro>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
 
 void pin_to_cpu()
 {
@@ -401,8 +413,10 @@ void audio_block(const float* const* in, float** out)
         cv_.notify_all();
 
     irq_disable();
+    double t0 = mono_us();
     if(cfg_.mode == Mode::Lockstep)
         run_timers(t);
+    double        t1 = mono_us();
     AudioCallback cb = audio_cb_;
     if(cb && pre_audio_)
         pre_audio_();
@@ -411,6 +425,12 @@ void audio_block(const float* const* in, float** out)
     else
         for(int c = 0; c < 4; c++)
             std::memset(out[c], 0, sizeof(float) * kBlockSize);
+    double t2 = mono_us();
+    timers_sum_ += t1 - t0;
+    timers_max_ = std::max(timers_max_, t1 - t0);
+    audio_sum_ += t2 - t1;
+    audio_max_ = std::max(audio_max_, t2 - t1);
+    load_blocks_++;
     irq_enable();
 
     if(cfg_.mode == Mode::Lockstep)
@@ -420,6 +440,19 @@ void audio_block(const float* const* in, float** out)
         cv_.notify_all();
         cv_.wait(l, [&] { return fw_done_ || (fw_sleeping_ && fw_wake_ > vtime_); });
     }
+}
+
+Load load()
+{
+    Load l;
+    l.blocks        = load_blocks_;
+    l.audio_avg_us  = load_blocks_ ? audio_sum_ / load_blocks_ : 0;
+    l.audio_max_us  = audio_max_;
+    l.timers_avg_us = load_blocks_ ? timers_sum_ / load_blocks_ : 0;
+    l.timers_max_us = timers_max_;
+    audio_sum_ = audio_max_ = timers_sum_ = timers_max_ = 0;
+    load_blocks_ = 0;
+    return l;
 }
 
 void stop()

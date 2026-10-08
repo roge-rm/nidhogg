@@ -12,6 +12,7 @@
 //     0:switch:rec      Play/Record switch (rec|play)
 //     3:midi:usb:903c7f MIDI bytes in (trs|usb), hex
 //     4:leds            print the LEDs
+//     5:load            print the audio and timer load since the last load
 //   Output: 4 channels, 32-bit float: headphone L/R, line L/R.
 #include "board.h"
 #include "vhw.h"
@@ -78,6 +79,15 @@ void apply(const Event& e)
     }
     else if(e.what == "leds")
         print_leds();
+    else if(e.what == "load")
+    {
+        // load since the last "load" event (or the start)
+        vhw::Load l = vhw::load();
+        std::printf("[%8.3f] load: audio avg %.0f us (%.1f%%) max %.0f us (%.1f%%); timers avg %.0f us max %.0f us\n",
+                    vhw::now_us() / 1e6, l.audio_avg_us, l.audio_avg_us / vhw::kBlockUs * 100,
+                    l.audio_max_us, l.audio_max_us / vhw::kBlockUs * 100, l.timers_avg_us,
+                    l.timers_max_us);
+    }
     else
         std::fprintf(stderr, "unknown event %s\n", e.what.c_str());
 }

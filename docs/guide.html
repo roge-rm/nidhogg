@@ -83,7 +83,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
 <div class="wrap">
   <header>
     <h1>Playing nidhogg</h1>
-    <p class="lede">nidhogg runs Chompi's own firmware on norns, with an OMX-27 as the panel. There are three: <b>TAPE</b>, a sampler and varispeed tape looper; <b>TEMPO</b>, a sample arpeggiator and slicer with a granular delay; and <b>WAVE</b>, a wavetable synth with a step sequencer. Most of this page is about TAPE; TEMPO and WAVE have their own sections near the end.</p>
+    <p class="lede">nidhogg runs Chompi's firmware on norns, with an OMX-27 as the panel. Pick one of three in the norns settings: TAPE, a sampler and tape looper; TEMPO, a sample arpeggiator and slicer; or WAVE, a wavetable synth with a step sequencer.</p>
   </header>
 
   <section>
@@ -156,10 +156,10 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
         </svg>
       </div>
       <div style="display:grid;gap:10px">
-        <p><kbd class="k-chompi">E1</kbd> is Chompi's Play/Record switch. In Play, <kbd class="k-chompi">AUX</kbd> is shift. In Record, it records.</p>
-        <p><kbd class="k-chompi">K2</kbd> and <kbd class="k-chompi">K3</kbd> run the looper.</p>
-        <p>Hold the leftmost bottom key, <kbd class="k-knob">PUSH</kbd> (or <kbd>K1</kbd> on the norns), and nudge a pot to <b>push</b> that knob, which steps it to its next page. PUSH lights amber while any knob is off its first page.</p>
-        <p class="note">Every OMX key lights up with the colour Chompi's own key would show.</p>
+        <p><kbd class="k-chompi">E1</kbd> is Chompi's switch. Left: <kbd class="k-chompi">AUX</kbd> is shift. Right: AUX records.</p>
+        <p><kbd class="k-chompi">K2</kbd> is PLAY and <kbd class="k-chompi">K3</kbd> is LOOP.</p>
+        <p>Hold <kbd class="k-knob">PUSH</kbd>, the leftmost bottom key, and nudge a pot to push that knob. <kbd>K1</kbd> does the same. PUSH lights amber while any knob is past its first page.</p>
+        <p class="note">The OMX keys light up as Chompi's own keys would.</p>
       </div>
     </div>
   </section>
@@ -168,27 +168,25 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
     <h2>Knobs and pages</h2>
     <div class="cols">
       <div style="display:grid;gap:10px">
-        <p>Each knob has two or three jobs, called pages. Hold <kbd class="k-knob">PUSH</kbd> and nudge the pot to step to the next page. The screen shows which page you're on as dots.</p>
-        <p>A pot does nothing until you sweep it past the knob's current setting, then it takes over. Until then the screen shows a small triangle where the pot is, and which way to sweep.</p>
+        <p>Each knob has two or three pages. Push the knob to go to the next one. Dots on the screen show which page you're on.</p>
+        <p>A pot does nothing until you sweep it past the knob's setting. Then it takes over.</p>
       </div>
-      <div class="oled-fig">
-        <div class="oled big" aria-label="OMX screen showing the filter, the pot not yet picked up">
+      <div class="oled big" aria-label="OMX screen showing the filter, the pot not yet picked up">
           <div class="row" style="top:4px;font-size:24px"><span>FILTER</span><span>HIGH 30</span></div>
           <div class="bar" style="top:57px;height:36px"><div class="fill" style="width:65%"></div><div style="position:absolute;left:calc(50% - 3px);top:0;bottom:0;width:6px;background:var(--oled-bg)"></div><div style="position:absolute;left:21%;top:-2px;bottom:-2px;width:9px;background:var(--oled-bg)"></div><div style="position:absolute;left:calc(21% + 3px);top:-2px;bottom:-2px;width:3px;background:var(--oled-ink)"></div></div>
         </div>
-        <div class="oled-cap">The OMX screen while you move Magic on its filter page. The thin line in the bar is where the pot is: sweep it past the filled part to pick it up. The norns screen shows the same with more detail.</div>
-      </div>
+        <div class="oled-cap">Moving Magic on its filter page. The thin line is the pot: sweep it past the filled part to pick it up.</div>
     </div>
     <div class="scroll">
       <table>
         <thead><tr><th>Knob</th><th>Page 1</th><th>Page 2</th><th>Page 3</th></tr></thead>
         <tbody>
-          <tr><td><kbd class="k-knob">Pitch</kbd></td><td>speed and direction. Right of middle plays forward, left backwards, middle almost stops. About 5/6 up is normal speed.</td><td>sample gain</td><td></td></tr>
-          <tr><td><kbd class="k-knob">Start</kbd></td><td>where in the sample playback starts</td><td>attack</td><td></td></tr>
+          <tr><td><kbd class="k-knob">Pitch</kbd></td><td>speed and direction. Right of middle is forward, left is backwards. About 5/6 up is normal speed.</td><td>gain</td><td></td></tr>
+          <tr><td><kbd class="k-knob">Start</kbd></td><td>where playback starts</td><td>attack</td><td></td></tr>
           <tr><td><kbd class="k-knob">End</kbd></td><td>where it ends</td><td>release</td><td></td></tr>
-          <tr><td><kbd class="k-knob">Magic</kbd></td><td>reverb and delay together</td><td>lo-fi saturation</td><td>filter. Middle is off, left low-pass, right high-pass</td></tr>
-          <tr><td><kbd class="k-knob">Volume</kbd></td><td>main volume</td><td>input gain</td><td></td></tr>
-          <tr><td><kbd class="k-chompi">Transport</kbd></td><td>the looper's speed, -2x to 2x. Push the encoder for 1x.</td><td></td><td></td></tr>
+          <tr><td><kbd class="k-knob">Magic</kbd></td><td>reverb and delay</td><td>lo-fi</td><td>filter. Left low-pass, right high-pass, middle off</td></tr>
+          <tr><td><kbd class="k-knob">Volume</kbd></td><td>volume</td><td>input gain</td><td></td></tr>
+          <tr><td><kbd class="k-chompi">Transport</kbd></td><td>looper speed, -2x to 2x. Push for 1x.</td><td></td><td></td></tr>
         </tbody>
       </table>
     </div>
@@ -198,25 +196,23 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
     <h2>Playing samples</h2>
     <div class="cols">
       <div style="display:grid;gap:10px">
-        <p><b>JAMMI</b> mode plays one sample across all the keys. White key 8 plays it at its own pitch. Up to 7 notes sound at once.</p>
-        <p><b>CUBBI</b> mode gives each white key its own sample at its own pitch, each with its own knob settings.</p>
-        <p>To pick a sample in JAMMI, hold <kbd class="k-chompi">AUX</kbd> and press a white key. Keys 1-14 are the card's slots in the current bank; key 15 is the RAM slot, where your own recordings go. Slots that have a sample light up in the bank's colour while you hold AUX.</p>
-        <p class="note">After start-up you're in JAMMI on slot 15. Until you record something it plays a built-in test tone.</p>
+        <p>JAMMI plays one sample across the keys. White key 8 plays it at its own pitch. Up to 7 notes at once.</p>
+        <p>CUBBI gives each white key its own sample and knob settings.</p>
+        <p>To pick a sample, hold AUX and press a white key. Keys 1-14 are the slots in the current bank. Key 15 is the RAM slot, where your recordings go. While you hold AUX, slots with a sample light up in the bank's colour.</p>
+        <p class="note">TAPE starts in JAMMI on slot 15, which plays a test tone until you record something.</p>
       </div>
-      <div class="oled-fig">
-        <div class="oled big" aria-label="OMX screen at rest">
+      <div class="oled big" aria-label="OMX screen at rest">
           <div class="row" style="top:4px;font-size:24px"><span>A RAM</span><span></span></div>
           <div style="position:absolute;left:8px;top:57px;width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-left:30px solid var(--oled-ink)"></div>
           <div class="bar" style="top:57px;height:36px;left:54px"><div class="fill" style="width:40%"></div></div>
         </div>
-        <div class="oled-cap">At rest the OMX screen shows the bank and slot, and the looper: ▶ playing, ● recording, ‖ paused, with its position. REC appears top right in Record. The norns screen adds the mode, input and FX order.</div>
-      </div>
+        <div class="oled-cap">At rest: bank and slot, and the looper. ▶ playing, ● recording, ‖ paused. REC shows top right in Record.</div>
     </div>
   </section>
 
   <section>
-    <h2>The shift menu</h2>
-    <p>Hold <kbd class="k-chompi">AUX</kbd> and the black keys and pots change jobs. Let go to go back.</p>
+    <h2>Shift</h2>
+    <p>Hold AUX and the black keys and pots change jobs.</p>
     <div class="scroll">
       <svg viewBox="0 0 860 120" width="860" height="120" role="img" aria-label="The ten black keys and their shift jobs">
         <g font-size="11">
@@ -239,34 +235,32 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
     </div>
     <div class="cols">
       <div style="display:grid;gap:8px">
-        <h3>Pots and pushes while AUX is held</h3>
+        <h3>Pots and pushes with AUX held</h3>
         <ul>
           <li><kbd class="k-knob">Pitch</kbd> tunes in fifths and fourths. Page 2 is pan.</li>
-          <li><kbd class="k-knob">Start</kbd> and <kbd class="k-knob">End</kbd> slide the whole start-to-end window. Page 2 sets attack and release together.</li>
-          <li><kbd class="k-knob">Magic</kbd> sets the delay time (and reverb length), then warble, then filter resonance.</li>
-          <li><kbd class="k-knob">Volume</kbd> sets the output compressor.</li>
-          <li>Push Start: auto-loop on or off. Push End: sustain on or off. Push Magic: reset all FX. Push Volume: where the input is heard.</li>
-          <li><kbd class="k-chompi">K2</kbd> / <kbd class="k-chompi">K3</kbd>: overdub level down or up.</li>
+          <li><kbd class="k-knob">Start</kbd> and <kbd class="k-knob">End</kbd> move the whole window. Page 2 sets attack and release together.</li>
+          <li><kbd class="k-knob">Magic</kbd> sets delay time, then warble, then filter resonance.</li>
+          <li><kbd class="k-knob">Volume</kbd> sets the compressor.</li>
+          <li>Push Start for auto-loop, End for sustain, Magic to reset the FX, Volume for where the input is heard.</li>
+          <li><kbd class="k-chompi">K2</kbd> and <kbd class="k-chompi">K3</kbd> turn the overdub level down and up.</li>
         </ul>
       </div>
-      <div class="oled-fig">
-        <div class="oled big" aria-label="OMX screen with shift held">
+      <div class="oled big" aria-label="OMX screen with shift held">
           <div class="row" style="top:4px;font-size:24px"><span>SHIFT</span><span>JAMMI A</span></div>
         </div>
-        <div class="oled-cap">With AUX held the OMX screen just says SHIFT and the mode and bank. The norns screen lists all ten black-key jobs with the current ones filled in, and what each pot does.</div>
-      </div>
+        <div class="oled-cap">Holding AUX. The norns screen lists all ten shift jobs and what each pot does.</div>
     </div>
   </section>
 
   <section>
     <h2>Recording a sample</h2>
     <div class="steps">
-      <div class="step"><b>1</b><p>Turn <kbd class="k-chompi">E1</kbd> right for <b>Record</b>. You now hear the input.</p></div>
-      <div class="step"><b>2</b><p>Hold <kbd class="k-chompi">AUX</kbd> while you make the sound. Let go to stop. The screen shows SAMPLING.</p></div>
-      <div class="step"><b>3</b><p>Turn <kbd class="k-chompi">E1</kbd> left for <b>Play</b> and play it on the keys. It's in slot 15.</p></div>
-      <div class="step"><b>Keep it</b><p>Hold AUX, press <kbd class="k-func">save</kbd>, press a white key 1-14 for where it goes, then press AUX to confirm. Copy and erase work the same way.</p></div>
+      <div class="step"><b>1</b><p>Turn <kbd class="k-chompi">E1</kbd> right. You hear the input.</p></div>
+      <div class="step"><b>2</b><p>Hold <kbd class="k-chompi">AUX</kbd> while you make the sound. Let go to stop.</p></div>
+      <div class="step"><b>3</b><p>Turn <kbd class="k-chompi">E1</kbd> left and play it on the keys. It's in slot 15.</p></div>
+      <div class="step"><b>Keep it</b><p>Hold AUX, press <kbd class="k-func">save</kbd>, press a white key 1-14, then press AUX. Copy and erase work the same way.</p></div>
     </div>
-    <p class="note">The input is whatever the shift menu has chosen: mic (norns left input), line (both inputs) or resample (nidhogg itself).</p>
+    <p class="note">The input is set in shift: mic (norns left input), line (both inputs) or resample (nidhogg itself).</p>
   </section>
 
   <section>
@@ -279,11 +273,11 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
       <span class="st">paused</span>
     </div>
     <ul>
-      <li><kbd class="k-chompi">LOOP</kbd> starts the first recording. Press again to close the loop, and it carries straight on overdubbing. Press again to stop overdubbing, and again to start a new layer.</li>
-      <li><kbd class="k-chompi">PLAY</kbd> stops and starts the tape, with a little tape-stop slowdown. Hold it 2 seconds while paused to rewind.</li>
-      <li><kbd class="k-chompi">PLAY</kbd> + <kbd class="k-chompi">LOOP</kbd> on an empty looper: recording starts with your next note.</li>
-      <li>Hold <kbd class="k-chompi">PLAY</kbd> + <kbd class="k-chompi">LOOP</kbd> for 2 seconds to clear the loop.</li>
-      <li><kbd class="k-chompi">Transport</kbd> (OMX encoder or E2) sets the tape speed from -2x to 2x while playing. While paused, turning it scrubs the tape. Push the OMX encoder for normal speed.</li>
+      <li><kbd class="k-chompi">LOOP</kbd> starts recording. Press again to close the loop and carry on overdubbing. Press again to stop overdubbing.</li>
+      <li><kbd class="k-chompi">PLAY</kbd> stops and starts the tape. Hold it 2 seconds while paused to rewind.</li>
+      <li>PLAY and LOOP together on an empty looper: recording starts with your next note.</li>
+      <li>Hold PLAY and LOOP 2 seconds to clear the loop.</li>
+      <li><kbd class="k-chompi">Transport</kbd> (OMX encoder or E2) sets the speed while playing and scrubs while paused.</li>
     </ul>
   </section>
 
@@ -291,30 +285,30 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
     <h2>Settings</h2>
     <p>On the norns, go to PARAMETERS &gt; EDIT.</p>
     <ul>
-      <li><b>firmware</b>: TAPE, TEMPO or WAVE. Switching is instant. The one you leave pauses and carries on where it was when you come back, looper and all. On a real Chompi you'd swap SD cards and reboot.</li>
-      <li><b>screensaver after</b>: 1, 3 or 10 minutes, or off. The OLED and norns screen can burn in, so after this long without input a dragon crosses both screens and the keys glow under it. Any key, pot or encoder wakes it.</li>
-      <li><b>midi out to</b> and <b>midi in from</b>: which norns MIDI devices Chompi's MIDI goes to and comes from.</li>
-      <li><b>tape, tempo and wave options</b>: each firmware's own settings, the same as its <code>options.json</code> on a Chompi card. As on the hardware they're read when the firmware starts, so they take effect after restarting the norns.</li>
+      <li><b>firmware</b>: TAPE, TEMPO or WAVE. The one you leave pauses and carries on where it was when you come back.</li>
+      <li><b>screensaver after</b>: 1, 3 or 10 minutes, or off. A dragon crosses both screens and the keys glow under it. Any key, pot or encoder wakes it.</li>
+      <li><b>midi out to</b>, <b>midi in from</b>: the norns MIDI devices for Chompi's MIDI.</li>
+      <li><b>tape, tempo and wave options</b>: each firmware's settings, as in the <code>options.json</code> on a Chompi card. They take effect after restarting the norns.</li>
     </ul>
-    <p class="note">Each firmware has its own "card" folder in <code>dust/audio/nidhogg</code>, laid out like a Chompi SD card. You can add or replace samples there through maiden.</p>
+    <p class="note">Each firmware's samples are in its own folder in <code>dust/audio/nidhogg</code>, laid out like a Chompi SD card.</p>
   </section>
 
   <section>
     <h2>TEMPO</h2>
-    <p>A sample player and arpeggiator with two engines: <b>chromatic</b> plays one sample across the keys, <b>slice</b> cuts a sample into 16 slices on the white keys. Each engine has its own arpeggiator, clock division and MIDI channel, and both run together.</p>
+    <p>Two engines that run together. Chromatic plays one sample across the keys. Slice cuts a sample into 16 slices on the white keys. Each has its own arpeggiator, clock division and MIDI channel.</p>
     <div class="scroll">
       <table>
-        <thead><tr><th>Control</th><th>TEMPO does</th></tr></thead>
+        <thead><tr><th>Control</th><th>In TEMPO</th></tr></thead>
         <tbody>
-          <tr><td><kbd class="k-chompi">E1</kbd></td><td>left: AUX is shift. Right: AUX records into the buffer (slot 15)</td></tr>
-          <tr><td><kbd class="k-chompi">K2</kbd> PLAY</td><td>starts and stops the arpeggiator. Hold 1 s to stop just the current engine</td></tr>
-          <tr><td><kbd class="k-chompi">K3</kbd> LOOP</td><td>latch: notes you play stay in the arp</td></tr>
-          <tr><td><kbd class="k-chompi">Encoder</kbd></td><td>tempo. Push to tap tempo; hold the push and turn for clock division</td></tr>
-          <tr><td><kbd class="k-knob">Pitch</kbd></td><td>speed, then sample volume, then filter</td></tr>
-          <tr><td><kbd class="k-knob">Start</kbd> / <kbd class="k-knob">End</kbd></td><td>sample window, then attack / release</td></tr>
-          <tr><td><kbd class="k-knob">Magic</kbd></td><td>granular delay, then delay mix. Push it briefly to freeze the delay</td></tr>
+          <tr><td><kbd class="k-chompi">E1</kbd></td><td>left: AUX is shift. Right: AUX records into slot 15</td></tr>
+          <tr><td><kbd class="k-chompi">K2</kbd> PLAY</td><td>starts and stops the arpeggiator. Hold 1 second to stop only the current engine</td></tr>
+          <tr><td><kbd class="k-chompi">K3</kbd> LOOP</td><td>latch: notes stay in the arpeggiator after you let go</td></tr>
+          <tr><td><kbd class="k-chompi">Encoder</kbd></td><td>tempo. Push to tap tempo. Hold the push and turn for clock division</td></tr>
+          <tr><td><kbd class="k-knob">Pitch</kbd></td><td>speed, then volume, then filter</td></tr>
+          <tr><td><kbd class="k-knob">Start</kbd>, <kbd class="k-knob">End</kbd></td><td>sample window, then attack and release</td></tr>
+          <tr><td><kbd class="k-knob">Magic</kbd></td><td>granular delay, then delay mix. A short push freezes the delay</td></tr>
           <tr><td>AUX + top keys</td><td>chromatic, slice, mic, line, resample, state A, state B, erase, copy, save</td></tr>
-          <tr><td>AUX + K2 / K3</td><td>next arp pattern (sequence, up, down, ping-pong, random) / next rest pattern</td></tr>
+          <tr><td>AUX + K2, K3</td><td>next arpeggio pattern, next rest pattern</td></tr>
         </tbody>
       </table>
     </div>
@@ -322,21 +316,21 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
 
   <section>
     <h2>WAVE</h2>
-    <p>An 8-voice wavetable synth with two LFOs, delay and reverb, and a 32-step sequencer you record from the keys.</p>
+    <p>An 8-voice wavetable synth with two LFOs, delay, reverb and a 32-step sequencer.</p>
     <div class="scroll">
       <table>
-        <thead><tr><th>Control</th><th>WAVE does</th></tr></thead>
+        <thead><tr><th>Control</th><th>In WAVE</th></tr></thead>
         <tbody>
           <tr><td><kbd class="k-chompi">E1</kbd></td><td>left: AUX is shift. Right: AUX mutes the sequencer, or adds a rest while recording</td></tr>
           <tr><td><kbd class="k-chompi">K2</kbd> PLAY</td><td>starts and stops the sequencer</td></tr>
-          <tr><td><kbd class="k-chompi">K3</kbd> LOOP</td><td>arms recording: each note you release adds a step. Hold 1.25 s to delete the last step; hold PLAY + LOOP to clear</td></tr>
+          <tr><td><kbd class="k-chompi">K3</kbd> LOOP</td><td>record steps: each note you let go of adds one. Hold LOOP to delete the last step. Hold PLAY and LOOP to clear</td></tr>
           <tr><td><kbd class="k-chompi">Encoder</kbd></td><td>tempo. Push to tap tempo</td></tr>
           <tr><td><kbd class="k-knob">Pitch</kbd></td><td>fine tune, then wavetable frame</td></tr>
-          <tr><td><kbd class="k-knob">Start</kbd> / <kbd class="k-knob">End</kbd></td><td>attack / release, then pitch LFO depth / filter LFO depth</td></tr>
-          <tr><td><kbd class="k-knob">Magic</kbd></td><td>left of middle delay, right reverb; then the filter</td></tr>
+          <tr><td><kbd class="k-knob">Start</kbd>, <kbd class="k-knob">End</kbd></td><td>attack and release, then pitch and filter LFO depth</td></tr>
+          <tr><td><kbd class="k-knob">Magic</kbd></td><td>delay to the left, reverb to the right, then the filter</td></tr>
           <tr><td><kbd class="k-knob">Volume</kbd></td><td>gain, then pan</td></tr>
-          <tr><td>AUX + top keys</td><td>octave down, octave up, gate 10%, 50%, 100%, pitch LFO on/off, filter LFO on/off, erase, copy, save</td></tr>
-          <tr><td>AUX + white keys</td><td>load preset 1-14; 15 is the default sound</td></tr>
+          <tr><td>AUX + top keys</td><td>octave down, octave up, gate 10%, 50%, 100%, pitch LFO, filter LFO, erase, copy, save</td></tr>
+          <tr><td>AUX + white keys</td><td>load preset 1-14. Key 15 is the default sound</td></tr>
         </tbody>
       </table>
     </div>
