@@ -71,8 +71,9 @@ using TimerCallback = void (*)(void* data);
 // (every 0.5 ms), as many times as are due.
 void set_timer(const void* id, double hz, TimerCallback cb, void* data);
 void stop_timer(const void* id);
-// One-shot callback in the timer context on the next timer tick (DMA ends).
+// One-shot callback in interrupt context at the next block (DMA ends).
 void post_irq(TimerCallback cb, void* data);
+void post_irq(std::function<void()> fn);
 
 // ---- midi -------------------------------------------------------------------
 

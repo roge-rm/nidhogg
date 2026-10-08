@@ -68,11 +68,7 @@ struct Timer
 };
 std::vector<Timer> timers_;
 std::mutex         timers_m_;
-struct Posted
-{
-    TimerCallback cb;
-    void*         data;
-};
+using Posted = std::function<void()>;
 std::deque<Posted> posted_;
 std::thread        timer_thread_;
 uint64_t           timer_next_ = 0;
@@ -108,7 +104,7 @@ void run_timers(uint64_t t)
         posted_.clear();
     }
     for(auto& p : posted)
-        p.cb(p.data);
+        p();
 
     for(auto& ms : midi_)
     {
@@ -316,8 +312,13 @@ void stop_timer(const void* id)
 
 void post_irq(TimerCallback cb, void* data)
 {
+    post_irq([cb, data] { cb(data); });
+}
+
+void post_irq(std::function<void()> fn)
+{
     std::lock_guard<std::mutex> l(timers_m_);
-    posted_.push_back({cb, data});
+    posted_.push_back(std::move(fn));
 }
 
 // ---- midi -------------------------------------------------------------------

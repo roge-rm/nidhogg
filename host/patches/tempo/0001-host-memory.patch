@@ -1,0 +1,58 @@
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -27,8 +27,14 @@
+ Hardware hw;
+ UserInterface ui;
+ 
++#ifdef NIDHOGG_HOST
++// Plain zeroed arrays on the host; the Daisy's memory sections don't exist.
++float granularBuffer[kBufferSize * 2];
++float frozenBuffer[kBufferSize * 2];
++#else
+ float __attribute__((section(".sdram_bss"))) granularBuffer[kBufferSize * 2]; // *2 for stereo so 10 sec stereo
+ float __attribute__((section(".sdram_bss"))) frozenBuffer[kBufferSize * 2]; // *2 for stereo so 10 sec stereo
++#endif
+ 
+ SdmmcHandler sdmmc;
+ FatFSInterface fsi;
+@@ -45,7 +51,11 @@
+ granularDelay delay;
+ StateSaver stateSaver;
+ BaseEngine* engines[2] = { &sEngine, &slice };
++#ifdef NIDHOGG_HOST
++Reverb reverb;
++#else
+ Reverb __attribute__((section(".dtcmram_bss"))) reverb;
++#endif
+ TimerHandle midi_clock_timer;
+ 
+ size_t tim_base_freq;
+@@ -63,7 +73,14 @@
+ bool testLoad; //To make sure wavetables don't get loaded until later
+ bool testSDLoaded;
+ 
++#ifdef NIDHOGG_HOST
++// SampleManager lays its samples out over the whole 64 MB SDRAM, starting past
++// the granular buffers, so it gets a block of its own.
++static uint8_t host_sdram[64 * 1024 * 1024];
++void *sample_ram_start = host_sdram;
++#else
+ void *sample_ram_start = (void *)0xC0000000;
++#endif
+ 
+ daisysp::Oscillator osc;
+ 
+@@ -204,11 +221,13 @@
+ 
+ void ZeroSDRAM()
+ {
++#ifndef NIDHOGG_HOST
+     uint32_t *beg, *end;
+     size_t    size_in_words = (1024 * 1024 * 64) / sizeof(uint32_t);
+     beg                     = (uint32_t*)0xc0000000;
+     end                     = (uint32_t*)(beg + size_in_words);
+     std::fill(beg, end, 0);
++#endif
+ }
+ 
+ bool no_sd_card = false;

@@ -1,0 +1,42 @@
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -28,6 +28,13 @@
+ #include "MidiManager.h"
+ 
+ #define DSY_DTCMRAM_BSS __attribute__((section(".dtcmram_bss")))
++#ifdef NIDHOGG_HOST
++// Plain zeroed arrays on the host; the Daisy's memory sections don't exist.
++#undef DSY_DTCMRAM_BSS
++#define DSY_DTCMRAM_BSS
++#undef DSY_SDRAM_BSS
++#define DSY_SDRAM_BSS
++#endif
+ 
+ #define MAX_CYCLES 256
+ #define MAX_SAMPLES_PER_CYCLE 2048
+@@ -54,7 +61,11 @@
+ daisysp::Reverb DSY_DTCMRAM_BSS reverb;
+ chompi::InterpolatedDelayLine::AudioSample DSY_SDRAM_BSS del_mem[kMaxDelayTime];
+ 
++#ifdef NIDHOGG_HOST
++float wavetableMemory[MAX_CYCLES][MAX_SAMPLES_PER_CYCLE];
++#else
+ float wavetableMemory[MAX_CYCLES][MAX_SAMPLES_PER_CYCLE] __attribute__((section(".sdram_bss")));
++#endif
+ 
+ daisysp::Oscillator osc;
+ 
+@@ -129,11 +140,13 @@
+  *  could play back stale/garbage SDRAM data */
+ void ZeroSDRAM()
+ {
++#ifndef NIDHOGG_HOST
+     uint32_t *beg, *end;
+     size_t    size_in_words = (1024 * 1024 * 64) / sizeof(uint32_t);
+     beg                     = (uint32_t*)0xc0000000;
+     end                     = (uint32_t*)(beg + size_in_words);
+     std::fill(beg, end, 0);
++#endif
+ }
+ 
+ bool no_sd_card = false;

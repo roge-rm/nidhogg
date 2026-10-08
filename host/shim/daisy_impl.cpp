@@ -376,11 +376,13 @@ UartHandler::Result UartHandler::DmaTransmit(uint8_t* buff, size_t size,
                                              StartCallbackFunctionPtr start_cb,
                                              EndCallbackFunctionPtr end_cb, void* ctx)
 {
+    // The bytes go out now; the end of the transfer is signalled later in
+    // interrupt context, as the DMA interrupt would.
     if(start_cb)
         start_cb(ctx);
     vhw::midi_tx(vhw::MidiPort::TRS, buff, size);
     if(end_cb)
-        end_cb(ctx, Result::OK);
+        vhw::post_irq([end_cb, ctx] { end_cb(ctx, Result::OK); });
     return Result::OK;
 }
 UartHandler::Result UartHandler::DmaReceive(uint8_t*, size_t, StartCallbackFunctionPtr,

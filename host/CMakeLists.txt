@@ -72,6 +72,7 @@ function(nidhogg_firmware fw)
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/daisy_impl.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/ff_posix.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/posix_dir.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/board_daisy.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/board_${fw}.cpp)
     target_include_directories(${lib} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/include
@@ -95,6 +96,7 @@ function(nidhogg_firmware fw)
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/vhw.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/ff_posix.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/posix_dir.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/board_daisy.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/board_${fw}.cpp
         PROPERTIES COMPILE_OPTIONS "-std=gnu++17;-frtti;-fexceptions;-Wall")
     target_link_libraries(${lib} PUBLIC Threads::Threads)
@@ -127,5 +129,13 @@ function(nidhogg_firmware fw)
 endfunction()
 
 nidhogg_firmware(tape UGEN NidhoggTape OSC_PORT 57140
+    SOURCES chompi_main.cpp encoder.cpp FileStreamingManager.cpp
+    LIBDAISY ui/UI.cpp hid/switch.cpp hid/midi.cpp hid/midi_parser.cpp util/color.cpp)
+
+nidhogg_firmware(tempo UGEN NidhoggTempo OSC_PORT 57141
+    SOURCES chompi_main.cpp encoder.cpp FileStreamingManager.cpp
+    LIBDAISY ui/UI.cpp hid/switch.cpp hid/midi.cpp hid/midi_parser.cpp util/color.cpp)
+
+nidhogg_firmware(wave UGEN NidhoggWave OSC_PORT 57142
     SOURCES chompi_main.cpp encoder.cpp FileStreamingManager.cpp
     LIBDAISY ui/UI.cpp hid/switch.cpp hid/midi.cpp hid/midi_parser.cpp util/color.cpp)
