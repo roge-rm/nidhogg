@@ -11,6 +11,10 @@
 //   /leds b:105 bytes          10 panel then 25 key LEDs, RGB, on change
 //   /midi s:port b:bytes       what the firmware sent
 //   /load f:avg_percent f:max_percent   once a second
+//   /knob i:knob i:page f:value         on change
+//   /pickup i:knob i:picked             whether a pot has taken over its knob
+//   /state i:menu i:state0..9           on change, see board::Status
+//   /looper f:position f:dub_level      on change
 #pragma once
 #include <string>
 

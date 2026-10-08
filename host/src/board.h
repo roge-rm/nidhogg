@@ -25,4 +25,22 @@ void set_switch(bool record);
 void pot(int knob, float value);
 Leds leds();
 
+// Firmware state for the norns and OMX-27 screens.
+struct Status
+{
+    int   knob_page[6];
+    float knob_value[6];
+    bool  pot_picked[6]; // the pot has taken over its knob
+    bool  menu;          // the shift menu is open
+    // Meaning set by each firmware; TAPE: voice mode (0 JAMMI, 1 CUBBI), bank
+    // being browsed, bank of the loaded slot, loaded slot, input (0 mic,
+    // 1 line, 2 resample), FX before the looper, monitor position, looper
+    // state (0 empty, 1 armed, 2 first recording, 3 overdub, 4 play, 5 paused),
+    // recording a sample.
+    int   state[10];
+    float looper_position;
+    float dub_level;
+};
+Status status();
+
 } // namespace board

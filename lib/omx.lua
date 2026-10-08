@@ -18,6 +18,11 @@ local dev
 local rx = {}
 local leds, shown = {}, {}
 
+-- screen: one frame in flight; the OMX acks each frame with 52 04
+local frame_pending = false
+local frame_sent_at = 0
+local last_chunks = {}
+
 local function send(cmd, payload)
   local m = {table.unpack(HEAD)}
   m[#m + 1] = cmd
@@ -28,7 +33,12 @@ end
 
 local function handle(m)
   -- m is a whole sysex message, F0 to F7
-  if #m < 7 or m[2] ~= 0x7D or m[5] ~= 0x51 then return end
+  if #m < 7 or m[2] ~= 0x7D then return end
+  if m[5] == 0x52 then
+    if m[6] == 0x04 then frame_pending = false end
+    return
+  end
+  if m[5] ~= 0x51 then return end
   local kind = m[6]
   if kind == 0x00 then
     omx.key(m[7], EVENTS[m[8]])
@@ -63,6 +73,8 @@ function omx.connect()
       dev.event = on_midi
       send(0x51, {0x05, MODE_REMOTE})
       for n = 0, 26 do leds[n] = {0, 0, 0}; shown[n] = {-1, -1, -1} end
+      last_chunks = {}
+      frame_pending = false
       return true
     end
   end
@@ -97,6 +109,67 @@ function omx.led_show()
   send(0x5A, payload)
   send(0x5B)
   for n = 0, 26 do shown[n] = {leds[n][1], leds[n][2], leds[n][3]} end
+end
+
+-- 8 bytes for every 7: a byte of high bits, then the 7 bytes' low 7 bits.
+local function enc7(data)
+  local out = {}
+  for i = 1, #data, 7 do
+    local hi, n = 0, #out + 1
+    out[n] = 0
+    for j = 0, 6 do
+      local b = data[i + j]
+      if b == nil then break end
+      hi = hi | (((b >> 7) & 1) << j)
+      out[#out + 1] = b & 0x7F
+    end
+    out[n] = hi
+  end
+  return out
+end
+
+-- Sends the 128x32 region of the norns screen at (x, y) to the OMX screen.
+-- Pixels at level 8 or above are lit. Returns false if the last frame isn't
+-- shown yet, so drawing can never run ahead of the OMX.
+function omx.screen_send(x, y)
+  if not dev then return false end
+  if frame_pending and util.time() - frame_sent_at < 0.25 then return false end
+  local px = screen.peek(x or 0, y or 0, 128, 32)
+  if not px then return false end
+  -- SSD1306 pages, turned 180 degrees as the panel is mounted
+  local fb = {}
+  for i = 1, 512 do fb[i] = 0 end
+  for yy = 0, 31 do
+    local row = yy * 128
+    for xx = 0, 127 do
+      if px:byte(row + xx + 1) >= 8 then
+        local rx, ry = 127 - xx, 31 - yy
+        local i = rx + (ry >> 3) * 128 + 1
+        fb[i] = fb[i] | (1 << (ry & 7))
+      end
+    end
+  end
+  local any = false
+  for c = 0, 15 do
+    local chunk, same = {}, last_chunks[c] ~= nil
+    for i = 1, 32 do
+      chunk[i] = fb[c * 32 + i]
+      if same and last_chunks[c][i] ~= chunk[i] then same = false end
+    end
+    if not same then
+      local payload = {c}
+      for _, b in ipairs(enc7(chunk)) do payload[#payload + 1] = b end
+      send(0x5C, payload)
+      last_chunks[c] = chunk
+      any = true
+    end
+  end
+  if any then
+    send(0x5D)
+    frame_pending = true
+    frame_sent_at = util.time()
+  end
+  return true
 end
 
 return omx

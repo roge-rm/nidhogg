@@ -17,6 +17,7 @@ engine.name = "Nidhogg"
 
 local install = include("lib/install")
 local omx = include("lib/omx")
+local view = include("lib/view")
 
 local OSC_PORT = 57140 -- TAPE
 local SW = {PLAY = 33, LOOP = 34}
@@ -34,32 +35,75 @@ local OMX_TO_SW = {
 }
 -- OMX pot -> Chompi knob: Pitch 0, Start 1, End 2, Magic 3, Volume 5
 local POT_TO_KNOB = {[0] = 0, 1, 2, 3, 5}
--- OMX pot -> hardware encoder whose push it gives with K1 held:
--- Pitch SW4, Start SW1, End SW2, Magic SW3, Volume SW6
-local POT_TO_ENC = {[0] = 3, 0, 1, 2, 5}
+-- Chompi knob -> hardware encoder, for pushes:
+-- Pitch SW4, Start SW1, End SW2, Magic SW3, Transport SW5, Volume SW6
+local KNOB_TO_ENC = {[0] = 3, 0, 1, 2, 4, 5}
+
+local leds = string.rep("\0", 105)
+local needs_restart = false
+local load_avg, load_max = 0, 0
+
+-- Firmware state from the bridge, plus what the screens need to know here.
+local s = {
+  knob_page = {}, knob_value = {}, picked = {}, pot = {},
+  menu = false, mode = 0, bank = 0, voice_bank = 0, slot = 15, input = 1,
+  fx_pre = false, monitor = 0, looper = 0, sample_rec = false,
+  looper_pos = 0, dub = 1, record_switch = false,
+  focus = nil, focus_time = 0,
+}
 
 -- K1 held: moving a pot pushes its knob instead of turning it. The push is
 -- released with K1, since Chompi acts on the release.
 local k1_held = false
-local pot_pos = {}    -- last position of each pot, 0-1
-local pot_from = {}   -- position when K1 went down
-local pushing = {}    -- encoders pushed during this hold
-
--- Chompi key LED (0-24) for an OMX key, and AUX shows the CHOMPI LED.
-local function omx_led_source(n)
-  if n == 0 then return 0 end -- panel LED 0
-  if n >= 1 and n <= 10 then return 10 + (n - 1) end -- black keys: SMT 0-9
-  if n >= 12 then return 10 + (25 - (n - 11)) end -- white keys: SMT 24-10
-  return nil
-end
-
-local leds = string.rep("\0", 105)
-local recording = false
-local needs_restart = false
-local load_avg, load_max = 0, 0
+local pot_from = {} -- pot position when K1 went down, by knob
+local pushing = {}  -- encoders pushed during this hold
 
 local function send(path, args)
   osc.send({"127.0.0.1", OSC_PORT}, path, args)
+end
+
+local function focus(knob)
+  s.focus = knob
+  s.focus_time = util.time()
+end
+
+-- OMX-27 key that shows each Chompi key light: AUX shows the CHOMPI light.
+local function omx_led_source(n)
+  if n == 0 then return 0 end -- panel light 0
+  if n >= 1 and n <= 10 then return 10 + (n - 1) end -- black keys: lights 0-9
+  if n >= 12 then return 10 + (25 - (n - 11)) end -- white keys: lights 24-10
+  return nil
+end
+
+local function start_omx()
+  omx.key = function(n, ev)
+    local sw = OMX_TO_SW[n]
+    if not sw then return end
+    if ev == "down" then send("/key", {sw, 1})
+    elseif ev == "up" then send("/key", {sw, 0}) end
+  end
+  omx.enc = function(d)
+    send("/turn", {ENC.TRANSPORT, d})
+    focus(4)
+  end
+  omx.enc_btn = function(z) send("/push", {ENC.TRANSPORT, z}) end
+  omx.pot = function(n, v, hires)
+    local knob = POT_TO_KNOB[n]
+    local pos = hires / 16383
+    s.pot[knob] = pos
+    if k1_held then
+      local enc = KNOB_TO_ENC[knob]
+      pot_from[knob] = pot_from[knob] or pos
+      if not pushing[enc] and math.abs(pos - pot_from[knob]) > 0.03 then
+        pushing[enc] = true
+        send("/push", {enc, 1})
+      end
+      return
+    end
+    send("/pot", {knob, pos})
+    focus(knob)
+  end
+  omx.connect()
 end
 
 function init()
@@ -69,31 +113,7 @@ function init()
     return
   end
   engine.start("tape")
-
-  omx.key = function(n, ev)
-    local sw = OMX_TO_SW[n]
-    if not sw then return end
-    if ev == "down" then send("/key", {sw, 1})
-    elseif ev == "up" then send("/key", {sw, 0}) end
-  end
-  omx.enc = function(d) send("/turn", {ENC.TRANSPORT, d}) end
-  omx.enc_btn = function(z) send("/push", {ENC.TRANSPORT, z}) end
-  omx.pot = function(n, v, hires)
-    local pos = hires / 16383
-    pot_pos[n] = pos
-    if k1_held then
-      local enc = POT_TO_ENC[n]
-      pot_from[n] = pot_from[n] or pos
-      if not pushing[enc] and math.abs(pos - pot_from[n]) > 0.03 then
-        pushing[enc] = true
-        send("/push", {enc, 1})
-      end
-      return
-    end
-    send("/pot", {POT_TO_KNOB[n], pos})
-  end
-  omx.connect()
-
+  start_omx()
   clock.run(function()
     while true do
       clock.sleep(1 / 15)
@@ -106,6 +126,7 @@ function init()
       end
       omx.led_show()
       redraw()
+      omx.screen_send(0, 0)
     end
   end)
 end
@@ -117,6 +138,21 @@ end
 function osc.event(path, args, from)
   if path == "/leds" then
     leds = args[1]
+  elseif path == "/knob" then
+    local k = args[1]
+    local changed = s.knob_page[k] ~= nil
+      and (s.knob_page[k] ~= args[2] or math.abs(s.knob_value[k] - args[3]) > 0.001)
+    s.knob_page[k], s.knob_value[k] = args[2], args[3]
+    if changed and s.focus == k then s.focus_time = util.time() end
+  elseif path == "/pickup" then
+    s.picked[args[1]] = args[2] == 1
+  elseif path == "/state" then
+    s.menu = args[1] == 1
+    s.mode, s.bank, s.voice_bank, s.slot = args[2], args[3], args[4], args[5]
+    s.input, s.fx_pre, s.monitor = args[6], args[7] == 1, args[8]
+    s.looper, s.sample_rec = args[9], args[10] == 1
+  elseif path == "/looper" then
+    s.looper_pos, s.dub = args[1], args[2]
   elseif path == "/load" then
     load_avg, load_max = args[1], args[2]
   end
@@ -126,7 +162,7 @@ function key(n, z)
   if n == 1 then
     k1_held = z == 1
     if k1_held then
-      for i = 0, 4 do pot_from[i] = pot_pos[i] end
+      for k, pos in pairs(s.pot) do pot_from[k] = pos end
     else
       for enc in pairs(pushing) do send("/push", {enc, 0}) end
       pushing = {}
@@ -140,23 +176,21 @@ end
 
 function enc(n, d)
   if n == 1 then
-    recording = d > 0
-    send("/switch", {recording and 1 or 0})
+    s.record_switch = d > 0
+    send("/switch", {s.record_switch and 1 or 0})
   elseif n == 2 then
     send("/turn", {ENC.TRANSPORT, d})
+    focus(4)
   elseif n == 3 then
     send("/turn", {ENC.VOLUME, d})
+    focus(5)
   end
-end
-
--- Screen level for an LED colour: the brightest channel, 0-15.
-local function level(i)
-  local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
-  return math.floor(math.max(r or 0, g or 0, b or 0) / 17)
 end
 
 function redraw()
   screen.clear()
+  screen.font_face(1)
+  screen.font_size(8)
   if needs_restart then
     screen.level(15)
     screen.move(64, 28)
@@ -166,22 +200,7 @@ function redraw()
     screen.update()
     return
   end
-  -- 10 panel LEDs along the top
-  for i = 0, 9 do
-    screen.level(level(i))
-    screen.circle(8 + i * 12, 10, 4)
-    screen.fill()
-  end
-  -- 25 key LEDs in Chompi's order
-  for i = 0, 24 do
-    screen.level(level(10 + i))
-    screen.rect(2 + i * 5, 40, 4, 8)
-    screen.fill()
-  end
-  screen.level(4)
-  screen.move(0, 62)
-  screen.text(recording and "record" or "play")
-  screen.move(127, 62)
-  screen.text_right(string.format("dsp %.0f%% / %.0f%%", load_avg, load_max))
+  view.info(s)
+  view.panel(leds)
   screen.update()
 end

@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include <atomic>
+#include <cmath>
 #include <chrono>
 #include <cstring>
 #include <thread>
@@ -89,11 +90,40 @@ int on_quit(const char*, const char*, lo_arg**, int, lo_message, void*)
     return 0;
 }
 
-// Sends LED changes and MIDI out every 10 ms, and the load once a second.
+// Sends what changed in the firmware's state.
+void send_status(board::Status& last, bool& first)
+{
+    board::Status st = board::status();
+    for(int k = 0; k < 6; k++)
+    {
+        if(first || st.knob_page[k] != last.knob_page[k]
+           || std::fabs(st.knob_value[k] - last.knob_value[k]) > 0.0005f)
+            lo_send(to, "/knob", "iif", k, st.knob_page[k], st.knob_value[k]);
+        if(first || st.pot_picked[k] != last.pot_picked[k])
+            lo_send(to, "/pickup", "ii", k, int(st.pot_picked[k]));
+    }
+    bool changed = first || st.menu != last.menu;
+    for(int i = 0; i < 10; i++)
+        changed = changed || st.state[i] != last.state[i];
+    if(changed)
+        lo_send(to, "/state", "iiiiiiiiiii", int(st.menu), st.state[0], st.state[1], st.state[2],
+                st.state[3], st.state[4], st.state[5], st.state[6], st.state[7], st.state[8],
+                st.state[9]);
+    if(first || std::fabs(st.looper_position - last.looper_position) > 0.002f
+       || st.dub_level != last.dub_level)
+        lo_send(to, "/looper", "ff", st.looper_position, st.dub_level);
+    last  = st;
+    first = false;
+}
+
+// Sends LED changes, firmware state and MIDI out every 10 ms, and the load
+// once a second.
 void pump_main()
 {
-    board::Leds last{};
-    double      next_load = now_s() + 1;
+    board::Leds   last{};
+    board::Status last_status{};
+    bool          first_status = true;
+    double        next_load    = now_s() + 1;
     while(running)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -105,6 +135,7 @@ void pump_main()
             lo_send(to, "/leds", "b", b);
             lo_blob_free(b);
         }
+        send_status(last_status, first_status);
         for(auto p : {vhw::MidiPort::TRS, vhw::MidiPort::USB})
         {
             auto bytes = vhw::midi_out(p);

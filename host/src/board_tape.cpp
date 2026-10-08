@@ -289,6 +289,17 @@ int   nidhogg_knob_page(int knob);
 bool  nidhogg_menu_active();
 bool  nidhogg_pitch_quantized();
 void  nidhogg_turn(int knob, int turns);
+int   nidhogg_voice_mode();
+int   nidhogg_bank();
+int   nidhogg_voice_bank();
+int   nidhogg_voice_slot();
+int   nidhogg_input_source();
+bool  nidhogg_fx_pre_looper();
+int   nidhogg_monitor_mode();
+int   nidhogg_looper_state();
+float nidhogg_looper_position();
+float nidhogg_dub_level();
+bool  nidhogg_sample_recording();
 
 namespace
 {
@@ -412,6 +423,30 @@ void pot(int knob, float value)
 {
     if(knob >= 0 && knob < 6)
         pots[knob].target = std::min(1.f, std::max(0.f, value));
+}
+
+Status status()
+{
+    Status st{};
+    for(int k = 0; k < 6; k++)
+    {
+        st.knob_page[k]  = nidhogg_knob_page(k);
+        st.knob_value[k] = nidhogg_knob_value(k);
+        st.pot_picked[k] = pots[k].picked;
+    }
+    st.menu            = nidhogg_menu_active();
+    st.state[0]        = nidhogg_voice_mode();
+    st.state[1]        = nidhogg_bank();
+    st.state[2]        = nidhogg_voice_bank();
+    st.state[3]        = nidhogg_voice_slot();
+    st.state[4]        = nidhogg_input_source();
+    st.state[5]        = nidhogg_fx_pre_looper();
+    st.state[6]        = nidhogg_monitor_mode();
+    st.state[7]        = nidhogg_looper_state();
+    st.state[8]        = nidhogg_sample_recording();
+    st.looper_position = nidhogg_looper_position();
+    st.dub_level       = nidhogg_dub_level();
+    return st;
 }
 
 } // namespace board
