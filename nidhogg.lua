@@ -136,9 +136,10 @@ local function start_omx()
     send("/push", {ENC.TRANSPORT, z})
   end
   omx.pot = function(n, v, hires)
-    saver.touch()
     local knob = POT_TO_KNOB[n]
     local pos = hires / 16383
+    -- a jittering pot shouldn't keep the screensaver away
+    if not s.pot[knob] or math.abs(pos - s.pot[knob]) > 0.01 then saver.touch() end
     s.pot[knob] = pos
     if k1_held then
       local enc = KNOB_TO_ENC[knob]

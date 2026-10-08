@@ -21,6 +21,7 @@ local leds, shown = {}, {}
 -- screen: one frame in flight; the OMX acks each frame with 52 04
 local frame_pending = false
 local frame_sent_at = 0
+local KEEP_ALIVE = 30 -- seconds; the OMX's own screensaver starts after 3 min without a frame
 local last_chunks = {}
 
 local function send(cmd, payload)
@@ -169,7 +170,7 @@ function omx.screen_send(x, y)
       any = true
     end
   end
-  if any then
+  if any or util.time() - frame_sent_at > KEEP_ALIVE then
     send(0x5D)
     frame_pending = true
     frame_sent_at = util.time()
