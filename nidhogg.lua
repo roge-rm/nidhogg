@@ -7,6 +7,8 @@
 -- pots = pitch start end magic volume
 -- (a pot takes over once it passes
 -- the knob's value)
+-- K1 held + move a pot: push that
+-- knob (next page)
 -- K2 play, K3 loop
 -- E1 play/record switch
 -- E2 transport, E3 volume
@@ -32,6 +34,16 @@ local OMX_TO_SW = {
 }
 -- OMX pot -> Chompi knob: Pitch 0, Start 1, End 2, Magic 3, Volume 5
 local POT_TO_KNOB = {[0] = 0, 1, 2, 3, 5}
+-- OMX pot -> hardware encoder whose push it gives with K1 held:
+-- Pitch SW4, Start SW1, End SW2, Magic SW3, Volume SW6
+local POT_TO_ENC = {[0] = 3, 0, 1, 2, 5}
+
+-- K1 held: moving a pot pushes its knob instead of turning it. The push is
+-- released with K1, since Chompi acts on the release.
+local k1_held = false
+local pot_pos = {}    -- last position of each pot, 0-1
+local pot_from = {}   -- position when K1 went down
+local pushing = {}    -- encoders pushed during this hold
 
 -- Chompi key LED (0-24) for an OMX key, and AUX shows the CHOMPI LED.
 local function omx_led_source(n)
@@ -67,7 +79,18 @@ function init()
   omx.enc = function(d) send("/turn", {ENC.TRANSPORT, d}) end
   omx.enc_btn = function(z) send("/push", {ENC.TRANSPORT, z}) end
   omx.pot = function(n, v, hires)
-    send("/pot", {POT_TO_KNOB[n], hires / 16383})
+    local pos = hires / 16383
+    pot_pos[n] = pos
+    if k1_held then
+      local enc = POT_TO_ENC[n]
+      pot_from[n] = pot_from[n] or pos
+      if not pushing[enc] and math.abs(pos - pot_from[n]) > 0.03 then
+        pushing[enc] = true
+        send("/push", {enc, 1})
+      end
+      return
+    end
+    send("/pot", {POT_TO_KNOB[n], pos})
   end
   omx.connect()
 
@@ -100,7 +123,15 @@ function osc.event(path, args, from)
 end
 
 function key(n, z)
-  if n == 2 then
+  if n == 1 then
+    k1_held = z == 1
+    if k1_held then
+      for i = 0, 4 do pot_from[i] = pot_pos[i] end
+    else
+      for enc in pairs(pushing) do send("/push", {enc, 0}) end
+      pushing = {}
+    end
+  elseif n == 2 then
     send("/key", {SW.PLAY, z})
   elseif n == 3 then
     send("/key", {SW.LOOP, z})
