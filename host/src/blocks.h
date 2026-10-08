@@ -2,7 +2,8 @@
 // any number of frames. Output lags input by one block (0.5 ms).
 //
 // The firmware sees the host's left input as its mic and both inputs as its
-// line in; the host gets Chompi's line out back.
+// line in; the host gets Chompi's headphone out back, where Chompi's default
+// monitor setting sends the input while recording.
 #pragma once
 #include "bridge.h"
 #include "vhw.h"
@@ -73,8 +74,8 @@ class Blocks
         for(size_t k = 0; k < kBlock; k++)
         {
             size_t w   = (out_read_ + out_fill_) & (kFifo - 1);
-            out_[0][w] = ob[2][k]; // line out
-            out_[1][w] = ob[3][k];
+            out_[0][w] = ob[0][k]; // headphones
+            out_[1][w] = ob[1][k];
             out_fill_++;
         }
         clock_gettime(CLOCK_MONOTONIC, &t1);
