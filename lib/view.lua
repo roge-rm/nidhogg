@@ -135,7 +135,7 @@ end
 local function draw_home(s)
   screen.level(15)
   local slot = s.slot == 15 and "RAM" or tostring(s.slot)
-  text(1, 6, string.format("%s  %s \u{b7} %s", MODES[s.mode] or "", BANKS[s.voice_bank] or "", slot))
+  text(1, 6, string.format("%s  %s  %s", MODES[s.mode] or "", BANKS[s.voice_bank] or "", slot))
   chip(102, 6, 26, s.record_switch and "REC" or "PLAY", s.record_switch)
   local fx = s.fx_pre and "fx > looper" or "looper > fx"
   text(1, 16, "in " .. (INPUTS[s.input] or ""))
