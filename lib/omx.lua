@@ -128,6 +128,11 @@ local function enc7(data)
   return out
 end
 
+-- Makes the next screen_send send the whole frame, not just what changed.
+function omx.screen_refresh()
+  last_chunks = {}
+end
+
 -- Sends the 128x32 region of the norns screen at (x, y) to the OMX screen.
 -- Pixels at level 8 or above are lit. Returns false if the last frame isn't
 -- shown yet, so drawing can never run ahead of the OMX.

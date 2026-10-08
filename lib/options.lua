@@ -1,29 +1,52 @@
--- Chompi's options.json, as norns params. Chompi reads the file when it
+-- Each firmware's options.json, as norns params. Chompi reads the file when it
 -- starts, as a real one reads it from its SD card, so a change takes effect
--- the next time the firmware starts (after restarting norns).
+-- the next time that firmware starts (after restarting norns).
 
 local options = {}
 
--- TAPE's options, in the file's order (OptionsManager.h).
-local TAPE = {
-  {name = "Record Latch", id = "record_latch", label = "record latch",
-    kind = "bool", names = {"hold to record", "press start/stop"}, default = false},
-  {name = "Midi In Channel", id = "midi_in_ch", label = "chompi midi in ch",
-    kind = "int", min = 1, max = 16, default = 1},
-  {name = "Midi Out Channel", id = "midi_out_ch", label = "chompi midi out ch",
-    kind = "int", min = 1, max = 16, default = 1},
-  {name = "Tape Slew On", id = "tape_slew", label = "tape slew",
-    kind = "bool", names = {"off", "on"}, default = true},
-  {name = "Monitor Position", id = "monitor", label = "monitor",
-    kind = "int", names = {"headphones", "both", "send/return"}, min = 1, max = 3, default = 1},
-  {name = "Pitch Quantize In Shift Menu", id = "pitch_quant", label = "quantised pitch",
-    kind = "bool", names = {"normal page", "shift page"}, default = true},
-  {name = "Split Delay", id = "split_delay", label = "split delay",
-    kind = "bool", names = {"off", "on"}, default = false},
-}
+local function bool(name, id, label, names, default)
+  return {name = name, id = id, label = label, kind = "bool", names = names, default = default}
+end
+local function channel(name, id, label, default)
+  return {name = name, id = id, label = label, kind = "int", min = 1, max = 16, default = default}
+end
+local ONOFF = {"off", "on"}
+local MONITOR = {name = "Monitor Position", id = "monitor", label = "monitor", kind = "int",
+  names = {"headphones", "both", "send/return"}, min = 1, max = 3, default = 1}
 
-local file
-local values = {}
+-- In each firmware's file order (its OptionsManager.h).
+local LISTS = {
+  tape = {
+    bool("Record Latch", "record_latch", "record latch", {"hold to record", "press start/stop"}, false),
+    channel("Midi In Channel", "midi_in_ch", "midi in ch", 1),
+    channel("Midi Out Channel", "midi_out_ch", "midi out ch", 1),
+    bool("Tape Slew On", "tape_slew", "tape slew", ONOFF, true),
+    MONITOR,
+    bool("Pitch Quantize In Shift Menu", "pitch_quant", "quantised pitch", {"normal page", "shift page"}, true),
+    bool("Split Delay", "split_delay", "split delay", ONOFF, false),
+  },
+  tempo = {
+    bool("Record Latch", "record_latch", "record latch", {"hold to record", "press start/stop"}, false),
+    channel("Midi In Channel", "midi_in_ch", "midi in ch", 1),
+    channel("Midi Out Channel Chromatic", "midi_out_chroma", "midi out ch chromatic", 1),
+    channel("Midi Out Channel Slice", "midi_out_slice", "midi out ch slice", 2),
+    bool("MIDI Clock Out", "clock_out", "midi clock out", ONOFF, true),
+    MONITOR,
+    bool("Pitch Quantize In Shift Menu", "pitch_quant", "quantised pitch", {"normal page", "shift page"}, true),
+    bool("MIDI CC In", "cc_in", "midi cc in", ONOFF, true),
+    bool("MIDI CC Out", "cc_out", "midi cc out", ONOFF, true),
+    {name = "Midi Start-Stop Message Behavior", id = "start_stop", label = "midi start/stop",
+      kind = "int", names = {"send + receive", "send", "receive", "neither"}, min = 1, max = 4, default = 1},
+    bool("Delay Buffer Unfreeze Mute", "unfreeze_mute", "mute on unfreeze", ONOFF, false),
+  },
+  wave = {
+    channel("Midi In Channel", "midi_in_ch", "midi in ch", 1),
+    channel("Midi Out Channel", "midi_out_ch", "midi out ch", 1),
+    bool("MIDI Clock Out", "clock_out", "midi clock out", ONOFF, true),
+    bool("MIDI CC In", "cc_in", "midi cc in", ONOFF, true),
+    bool("MIDI CC Out", "cc_out", "midi cc out", ONOFF, true),
+  },
+}
 
 local function read(path)
   local f = io.open(path, "r")
@@ -39,9 +62,9 @@ local function read(path)
   return out
 end
 
-local function write(path)
+local function write(path, list, values)
   local lines = {}
-  for i, o in ipairs(TAPE) do
+  for i, o in ipairs(list) do
     local v = values[o.name]
     if v == nil then v = o.default end
     lines[i] = string.format('\t\t{\n\t\t\t"name": "%s",\n\t\t\t"value": %s\n\t\t}', o.name, tostring(v))
@@ -52,32 +75,26 @@ local function write(path)
   f:close()
 end
 
--- Adds the params, filled from the card's options.json.
-function options.add_params(card)
-  file = card .. "/options.json"
-  values = read(file)
-  params:add_separator("chompi_options", "chompi options (on restart)")
-  for _, o in ipairs(TAPE) do
+-- Adds a group of params for one firmware, filled from its card's options.json.
+function options.add_params(fw, card)
+  local list = LISTS[fw]
+  local file = card .. "/options.json"
+  local values = read(file)
+  local function save() write(file, list, values) end
+  params:add_group(fw .. "_options", fw .. " options (on restart)", #list)
+  for _, o in ipairs(list) do
+    local id = fw .. "_" .. o.id
     local v = values[o.name]
     if v == nil then v = o.default end
     if o.kind == "bool" then
-      params:add_option(o.id, o.label, o.names, v and 2 or 1)
-      params:set_action(o.id, function(i)
-        values[o.name] = i == 2
-        write(file)
-      end)
+      params:add_option(id, o.label, o.names, v and 2 or 1)
+      params:set_action(id, function(i) values[o.name] = i == 2; save() end)
     elseif o.names then
-      params:add_option(o.id, o.label, o.names, util.clamp(v, o.min, o.max))
-      params:set_action(o.id, function(i)
-        values[o.name] = i
-        write(file)
-      end)
+      params:add_option(id, o.label, o.names, util.clamp(v, o.min, o.max))
+      params:set_action(id, function(i) values[o.name] = i; save() end)
     else
-      params:add_number(o.id, o.label, o.min, o.max, util.clamp(v, o.min, o.max))
-      params:set_action(o.id, function(i)
-        values[o.name] = i
-        write(file)
-      end)
+      params:add_number(id, o.label, o.min, o.max, util.clamp(v, o.min, o.max))
+      params:set_action(id, function(i) values[o.name] = i; save() end)
     end
   end
 end

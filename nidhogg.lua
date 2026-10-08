@@ -167,6 +167,25 @@ local function midi_devices()
   return names
 end
 
+-- nidhogg's own settings, kept between runs. Chompi's options live in each
+-- card's options.json instead, as on the hardware.
+local SETTINGS_FILE = _path.data .. "nidhogg/settings.lua"
+local SAVED = {"firmware", "saver", "midi_out", "midi_in"}
+
+local function save_settings()
+  local t = {}
+  for _, id in ipairs(SAVED) do t[id] = params:get(id) end
+  tab.save(t, SETTINGS_FILE)
+end
+
+local function load_settings()
+  local t = tab.load(SETTINGS_FILE)
+  if not t then return end
+  for _, id in ipairs(SAVED) do
+    if t[id] then params:set(id, t[id], true) end
+  end
+end
+
 local function add_params()
   params:add_separator("nidhogg", "nidhogg")
   params:add_option("saver", "screensaver after", {"1 min", "3 min", "10 min", "off"}, 2)
@@ -195,7 +214,21 @@ local function add_params()
     if running then switch_firmware(modes.order[i]) end
   end)
 
-  options.add_params(install.card_dir("tape"))
+  for _, fw in ipairs(modes.order) do
+    options.add_params(fw, install.card_dir(fw))
+  end
+
+  load_settings()
+  for _, id in ipairs(SAVED) do
+    local action = params:lookup_param(id).action
+    params:set_action(id, function(v)
+      action(v)
+      save_settings()
+    end)
+  end
+  -- apply the loaded MIDI devices
+  params:lookup_param("midi_out"):bang()
+  params:lookup_param("midi_in"):bang()
 end
 
 -- Switches to another firmware. The one left behind pauses, keeping its
@@ -203,6 +236,7 @@ end
 switch_firmware = function(fw)
   M = modes[fw]
   reset_state()
+  omx.screen_refresh()
   engine.start(fw)
   send("/switch", {0})
   clock.run(function()
