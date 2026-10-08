@@ -61,6 +61,7 @@ kbd { font: 600 12px var(--mono); padding: 1px 6px; border-radius: 4px; border: 
 .oled .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--oled-ink); }
 .oled .chip { padding: 0 3px; }
 .oled .chip.on { background: var(--oled-ink); color: var(--oled-bg); }
+.oled.big .row { font-size: 24px; }
 .oled-cap { font: 12px var(--mono); color: var(--muted); margin-top: 6px; }
 .oled-fig { display: grid; gap: 4px; }
 
@@ -82,7 +83,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
 <div class="wrap">
   <header>
     <h1>Playing nidhogg</h1>
-    <p class="lede">nidhogg runs Chompi's own TAPE firmware on norns, with an OMX-27 as the panel. TAPE is a sampler and a tape looper: play samples across the keys, record your own, and loop it all on a varispeed tape with delay and reverb. This covers the test build: TAPE only.</p>
+    <p class="lede">nidhogg runs Chompi's own firmware on norns, with an OMX-27 as the panel. There are three: <b>TAPE</b>, a sampler and varispeed tape looper; <b>TEMPO</b>, a sample arpeggiator and slicer with a granular delay; and <b>WAVE</b>, a wavetable synth with a step sequencer. Most of this page is about TAPE; TEMPO and WAVE have their own sections near the end.</p>
   </header>
 
   <section>
@@ -171,13 +172,11 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
         <p>A pot does nothing until you sweep it past the knob's current setting, then it takes over. Until then the screen shows a small triangle where the pot is, and which way to sweep.</p>
       </div>
       <div class="oled-fig">
-        <div class="oled" aria-label="OMX screen showing Magic on its filter page, the pot not yet picked up">
-          <div class="row" style="top:6px"><span>MAGIC</span><span>high 30</span></div>
-          <div class="bar" style="top:30px"><div class="fill" style="width:65%"></div><div style="position:absolute;left:calc(50% - 1px);top:0;bottom:0;width:3px;background:var(--oled-bg)"></div></div>
-          <div style="position:absolute;top:56px;left:calc(6px + 22%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:10px solid var(--oled-ink)"></div>
-          <div class="row" style="top:80px"><span>● ● ●&nbsp; filter</span><span>sweep &gt;</span></div>
+        <div class="oled big" aria-label="OMX screen showing the filter, the pot not yet picked up">
+          <div class="row" style="top:4px;font-size:24px"><span>FILTER</span><span>HIGH 30</span></div>
+          <div class="bar" style="top:57px;height:36px"><div class="fill" style="width:65%"></div><div style="position:absolute;left:calc(50% - 3px);top:0;bottom:0;width:6px;background:var(--oled-bg)"></div><div style="position:absolute;left:21%;top:-2px;bottom:-2px;width:9px;background:var(--oled-bg)"></div><div style="position:absolute;left:calc(21% + 3px);top:-2px;bottom:-2px;width:3px;background:var(--oled-ink)"></div></div>
         </div>
-        <div class="oled-cap">Magic on page 3, the filter. The pot (triangle) is left of the setting, so sweep right to pick it up.</div>
+        <div class="oled-cap">The OMX screen while you move Magic on its filter page. The thin line in the bar is where the pot is: sweep it past the filled part to pick it up. The norns screen shows the same with more detail.</div>
       </div>
     </div>
     <div class="scroll">
@@ -205,13 +204,12 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
         <p class="note">After start-up you're in JAMMI on slot 15. Until you record something it plays a built-in test tone.</p>
       </div>
       <div class="oled-fig">
-        <div class="oled" aria-label="OMX screen at rest">
-          <div class="row" style="top:6px"><span>JAMMI A3</span><span class="chip">PLAY</span></div>
-          <div class="row" style="top:36px"><span>IN LINE</span><span>LOOPER &gt; FX</span></div>
-          <div class="row" style="top:72px"><span>PLAYING</span><span></span></div>
-          <div class="bar" style="top:68px;left:170px;height:18px"><div class="fill" style="width:40%"></div></div>
+        <div class="oled big" aria-label="OMX screen at rest">
+          <div class="row" style="top:4px;font-size:24px"><span>A RAM</span><span></span></div>
+          <div style="position:absolute;left:8px;top:57px;width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-left:30px solid var(--oled-ink)"></div>
+          <div class="bar" style="top:57px;height:36px;left:54px"><div class="fill" style="width:40%"></div></div>
         </div>
-        <div class="oled-cap">At rest: mode, bank and slot, the Play/Record switch, input, FX order and the looper.</div>
+        <div class="oled-cap">At rest the OMX screen shows the bank and slot, and the looper: ▶ playing, ● recording, ‖ paused, with its position. REC appears top right in Record. The norns screen adds the mode, input and FX order.</div>
       </div>
     </div>
   </section>
@@ -252,13 +250,10 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
         </ul>
       </div>
       <div class="oled-fig">
-        <div class="oled" aria-label="OMX screen with shift held">
-          <div class="row" style="top:4px"><span>SHIFT</span><span>JAMMI A</span></div>
-          <div class="row" style="top:30px;justify-content:space-between"><span class="chip on">JAMMI</span><span class="chip">CUBBI</span><span class="chip">MIC</span><span class="chip on">LINE</span><span class="chip">RSMP</span></div>
-          <div class="row" style="top:56px"><span class="chip">PRE</span><span class="chip on">POST</span><span class="chip">ERASE</span><span class="chip">COPY</span><span class="chip">SAVE</span></div>
-          <div class="row" style="top:82px"><span>TUNE</span><span>MOVE</span><span>MOVE</span><span>TIME</span><span>COMP</span></div>
+        <div class="oled big" aria-label="OMX screen with shift held">
+          <div class="row" style="top:4px;font-size:24px"><span>SHIFT</span><span>JAMMI A</span></div>
         </div>
-        <div class="oled-cap">Shift held: current choices are filled in. The bottom row is what each pot does.</div>
+        <div class="oled-cap">With AUX held the OMX screen just says SHIFT and the mode and bank. The norns screen lists all ten black-key jobs with the current ones filled in, and what each pot does.</div>
       </div>
     </div>
   </section>
@@ -293,10 +288,57 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
   </section>
 
   <section>
-    <h2>Not in this build yet</h2>
+    <h2>Settings</h2>
+    <p>On the norns, go to PARAMETERS &gt; EDIT.</p>
     <ul>
-      <li>TEMPO and WAVE.</li>
-      <li>norns settings (Chompi's options), and Chompi's MIDI out to your MIDI devices.</li>
+      <li><b>firmware</b>: TAPE, TEMPO or WAVE. Switching is instant. The one you leave pauses and carries on where it was when you come back, looper and all. On a real Chompi you'd swap SD cards and reboot.</li>
+      <li><b>screensaver after</b>: 1, 3 or 10 minutes, or off. The OLED and norns screen can burn in, so after this long without input a dragon crosses both screens and the keys glow under it. Any key, pot or encoder wakes it.</li>
+      <li><b>midi out to</b> and <b>midi in from</b>: which norns MIDI devices Chompi's MIDI goes to and comes from.</li>
+      <li><b>tape, tempo and wave options</b>: each firmware's own settings, the same as its <code>options.json</code> on a Chompi card. As on the hardware they're read when the firmware starts, so they take effect after restarting the norns.</li>
     </ul>
+    <p class="note">Each firmware has its own "card" folder in <code>dust/audio/nidhogg</code>, laid out like a Chompi SD card. You can add or replace samples there through maiden.</p>
+  </section>
+
+  <section>
+    <h2>TEMPO</h2>
+    <p>A sample player and arpeggiator with two engines: <b>chromatic</b> plays one sample across the keys, <b>slice</b> cuts a sample into 16 slices on the white keys. Each engine has its own arpeggiator, clock division and MIDI channel, and both run together.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Control</th><th>TEMPO does</th></tr></thead>
+        <tbody>
+          <tr><td><kbd class="k-chompi">E1</kbd></td><td>left: AUX is shift. Right: AUX records into the buffer (slot 15)</td></tr>
+          <tr><td><kbd class="k-chompi">K2</kbd> PLAY</td><td>starts and stops the arpeggiator. Hold 1 s to stop just the current engine</td></tr>
+          <tr><td><kbd class="k-chompi">K3</kbd> LOOP</td><td>latch: notes you play stay in the arp</td></tr>
+          <tr><td><kbd class="k-chompi">Encoder</kbd></td><td>tempo. Push to tap tempo; hold the push and turn for clock division</td></tr>
+          <tr><td><kbd class="k-knob">Pitch</kbd></td><td>speed, then sample volume, then filter</td></tr>
+          <tr><td><kbd class="k-knob">Start</kbd> / <kbd class="k-knob">End</kbd></td><td>sample window, then attack / release</td></tr>
+          <tr><td><kbd class="k-knob">Magic</kbd></td><td>granular delay, then delay mix. Push it briefly to freeze the delay</td></tr>
+          <tr><td>AUX + top keys</td><td>chromatic, slice, mic, line, resample, state A, state B, erase, copy, save</td></tr>
+          <tr><td>AUX + K2 / K3</td><td>next arp pattern (sequence, up, down, ping-pong, random) / next rest pattern</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>WAVE</h2>
+    <p>An 8-voice wavetable synth with two LFOs, delay and reverb, and a 32-step sequencer you record from the keys.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Control</th><th>WAVE does</th></tr></thead>
+        <tbody>
+          <tr><td><kbd class="k-chompi">E1</kbd></td><td>left: AUX is shift. Right: AUX mutes the sequencer, or adds a rest while recording</td></tr>
+          <tr><td><kbd class="k-chompi">K2</kbd> PLAY</td><td>starts and stops the sequencer</td></tr>
+          <tr><td><kbd class="k-chompi">K3</kbd> LOOP</td><td>arms recording: each note you release adds a step. Hold 1.25 s to delete the last step; hold PLAY + LOOP to clear</td></tr>
+          <tr><td><kbd class="k-chompi">Encoder</kbd></td><td>tempo. Push to tap tempo</td></tr>
+          <tr><td><kbd class="k-knob">Pitch</kbd></td><td>fine tune, then wavetable frame</td></tr>
+          <tr><td><kbd class="k-knob">Start</kbd> / <kbd class="k-knob">End</kbd></td><td>attack / release, then pitch LFO depth / filter LFO depth</td></tr>
+          <tr><td><kbd class="k-knob">Magic</kbd></td><td>left of middle delay, right reverb; then the filter</td></tr>
+          <tr><td><kbd class="k-knob">Volume</kbd></td><td>gain, then pan</td></tr>
+          <tr><td>AUX + top keys</td><td>octave down, octave up, gate 10%, 50%, 100%, pitch LFO on/off, filter LFO on/off, erase, copy, save</td></tr>
+          <tr><td>AUX + white keys</td><td>load preset 1-14; 15 is the default sound</td></tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
