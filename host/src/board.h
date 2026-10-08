@@ -52,6 +52,8 @@ struct Status
     int   state[10];
     float looper_position;
     float dub_level;
+    float meter_in, meter_out; // levels, 0-1
+    uint32_t clock_ticks;      // MIDI clock ticks so far, 24 a beat; 0 for TAPE
 };
 Status status();
 

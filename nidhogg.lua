@@ -66,6 +66,8 @@ local function reset_state()
     knob_page = {}, knob_value = {}, picked = {}, pot = {},
     menu = false, st = {}, looper_pos = 0, dub = 1, record_switch = false,
     focus = nil, focus_time = 0,
+    meter_in = 0, meter_out = 0, ticks = 0,
+    omx_view = s and s.omx_view or "knobs", view_flash = nil,
   }
 end
 reset_state()
@@ -88,7 +90,31 @@ local function send(path, args)
   osc.send({"127.0.0.1", M.port}, path, args)
 end
 
+-- A tap on PUSH (down and up quickly, no pot moved) steps the OMX screen's
+-- default view.
+local omx_push_down_at = 0
+
+local function next_omx_view()
+  local views = view.OMX_VIEWS
+  local i = 1
+  for n, v in ipairs(views) do if v == s.omx_view then i = n end end
+  for _ = 1, #views do
+    i = i % #views + 1
+    local v = views[i]
+    if (v ~= "window" or M.has_window) and (v ~= "beat" or M.bpm) then break end
+  end
+  s.omx_view = views[i]
+  s.view_flash = util.time() + 0.8
+end
+
 local function push_hold(who, held)
+  if who == "omx" then
+    if held then
+      omx_push_down_at = util.time()
+    elseif next(pushing) == nil and util.time() - omx_push_down_at < 0.4 then
+      next_omx_view()
+    end
+  end
   push_holds[who] = held or nil
   local any = next(push_holds) ~= nil
   if any and not k1_held then
@@ -361,6 +387,10 @@ function osc.event(path, args, from)
       for k = 1, #bytes do data[k] = bytes:byte(k) end
       midi_out_dev:send(data)
     end
+  elseif path == "/meter" then
+    s.meter_in, s.meter_out = args[1], args[2]
+  elseif path == "/clock" then
+    s.ticks = args[1]
   elseif path == "/load" then
     load_avg, load_max = args[1], args[2]
   end

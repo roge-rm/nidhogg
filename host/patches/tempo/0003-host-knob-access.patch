@@ -16,7 +16,23 @@
      RainbowPage rainbow_page_;
 --- a/chompi_main.cpp
 +++ b/chompi_main.cpp
-@@ -488,4 +488,31 @@
+@@ -188,8 +188,15 @@
+     // meter.OnBlockEnd();
+ }
+ 
++#ifdef NIDHOGG_HOST
++// MIDI clock ticks so far, for nidhogg's beat display.
++volatile uint32_t nidhogg_ticks = 0;
++#endif
+ void MidiClockCallback(void* ctx)
+ {
++#ifdef NIDHOGG_HOST
++    nidhogg_ticks = nidhogg_ticks + 1;
++#endif
+     // Called at the timer frequency
+     if (arpSeq.getPlay(0) && options.midi_clock_out && cManager.getClockMode() == FREE) {
+         midi.QueueMidiClock();
+@@ -495,4 +502,38 @@
      {
          MainLoop(nullptr);
      }
@@ -49,4 +65,11 @@
 +    s[8] = arpSeq.getPattern();
 +    s[9] = arpSeq.getRestMode();
 +}
++// Levels for nidhogg's meters, 0-1, and MIDI clock ticks (24 a beat).
++void nidhogg_meters(float* in, float* out)
++{
++    *in  = fx.getVUSampleInput();
++    *out = fx.getVUSample();
++}
++uint32_t nidhogg_clock_ticks() { return nidhogg_ticks; }
 +#endif

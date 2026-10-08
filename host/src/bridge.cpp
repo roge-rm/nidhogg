@@ -120,6 +120,16 @@ void send_status(board::Status& last, bool& first)
     if(first || std::fabs(st.looper_position - last.looper_position) > 0.002f
        || st.dub_level != last.dub_level)
         lo_send(to, "/looper", "ff", st.looper_position, st.dub_level);
+    if(first || st.clock_ticks != last.clock_ticks)
+        lo_send(to, "/clock", "i", int(st.clock_ticks));
+    // levels at most 20 times a second
+    static double next_meter = 0;
+    double        t          = now_s();
+    if(t >= next_meter)
+    {
+        next_meter = t + 0.05;
+        lo_send(to, "/meter", "ff", st.meter_in, st.meter_out);
+    }
     last  = st;
     first = false;
 }

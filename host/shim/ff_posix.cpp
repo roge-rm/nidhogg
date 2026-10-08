@@ -89,7 +89,8 @@ FRESULT f_open(FIL* fp, const TCHAR* path, BYTE mode)
     fp->obj.objsize = FSIZE_t(st.st_size);
     fp->flag        = mode;
     fp->fptr        = 0;
-    if(mode & FA_OPEN_APPEND)
+    // FA_OPEN_APPEND is FA_OPEN_ALWAYS plus its own bit, so test both
+    if((mode & FA_OPEN_APPEND) == FA_OPEN_APPEND)
         fp->fptr = fp->obj.objsize;
     std::lock_guard<std::mutex> l(m_);
     files_[fp] = fd;

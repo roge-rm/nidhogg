@@ -16,6 +16,8 @@
 //   /pickup i:knob i:picked             whether a pot has taken over its knob
 //   /state i:menu i:state0..9           on change, see board::Status
 //   /looper f:position f:dub_level      on change
+//   /meter f:in f:out                   levels 0-1, 20 times a second
+//   /clock i:ticks                      MIDI clock ticks so far, 24 a beat
 #pragma once
 #include <string>
 

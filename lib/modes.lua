@@ -37,6 +37,8 @@ local LOOPER = {[0] = "empty", "armed", "recording", "overdub", "playing", "paus
 
 modes.tape = {
   name = "TAPE",
+  has_window = true,
+  audio_recording = function(s) return s.st[9] == 1 or s.st[8] == 2 or s.st[8] == 3 end,
   port = 57140,
   switch = {"PLAY", "REC"},
   knobs = {
@@ -94,6 +96,9 @@ local PATTERNS = {[0] = "seq", "up", "down", "pingpong", "random"}
 
 modes.tempo = {
   name = "TEMPO",
+  has_window = true,
+  bpm = function(s) return math.floor((s.st[5] or 320) / 2 + 0.5) end,
+  audio_recording = function(s) return s.st[4] == 1 end,
   port = 57141,
   switch = {"SHIFT", "REC"},
   knobs = {
@@ -142,6 +147,7 @@ modes.tempo = {
 
 modes.wave = {
   name = "WAVE",
+  bpm = function(s) return math.floor((s.st[2] or 320) / 2 + 0.5) end,
   port = 57142,
   switch = {"SHIFT", "PERF"},
   knobs = {

@@ -16,7 +16,23 @@
      RainbowPage rainbow_page_;
 --- a/chompi_main.cpp
 +++ b/chompi_main.cpp
-@@ -431,4 +431,31 @@
+@@ -212,8 +212,15 @@
+ 
+ /** Queues a MIDI clock pulse. CHOMPI runs on 12 PPQN, not 24. 24 created too much traffic
+  * on the MIDI out bus. */
++#ifdef NIDHOGG_HOST
++// MIDI clock ticks so far, for nidhogg's beat display.
++volatile uint32_t nidhogg_ticks = 0;
++#endif
+ void MidiClockCallback(void* ctx)
+ {
++#ifdef NIDHOGG_HOST
++    nidhogg_ticks = nidhogg_ticks + 1;
++#endif
+     if (seq.getPlaying() && options.midi_clock_out) {
+         midi.QueueMidiClock();
+     }
+@@ -437,4 +444,39 @@
      {
          MainLoop(nullptr);
      }
@@ -49,4 +65,12 @@
 +    s[8] = engine.getFilterLfoOn();
 +    s[9] = int(seq.getGate() * 100.f + 0.5f);
 +}
++// Levels for nidhogg's meters, 0-1 (WAVE ignores its inputs), and MIDI
++// clock ticks (24 a beat).
++void nidhogg_meters(float* in, float* out)
++{
++    *in  = 0.f;
++    *out = engine.getVUSample();
++}
++uint32_t nidhogg_clock_ticks() { return nidhogg_ticks; }
 +#endif

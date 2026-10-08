@@ -16,7 +16,7 @@
          daisy::UI ui;
 --- a/chompi_main.cpp
 +++ b/chompi_main.cpp
-@@ -418,4 +418,41 @@
+@@ -425,4 +425,48 @@
      {
          MainLoop(nullptr);
      }
@@ -59,4 +59,11 @@
 +float nidhogg_looper_position() { return engine.GetLooperPosition(); }
 +float nidhogg_dub_level() { return engine.GetLooperDubGain(); }
 +bool nidhogg_sample_recording() { return engine.Recording(); }
++// Levels for nidhogg's meters, 0-1. TAPE has no clock.
++void nidhogg_meters(float* in, float* out)
++{
++    *in  = engine.GetVUSample(VUTarget::VU_INPUT);
++    *out = engine.GetVUSample(VUTarget::VU_OUTPUT);
++}
++uint32_t nidhogg_clock_ticks() { return 0; }
 +#endif

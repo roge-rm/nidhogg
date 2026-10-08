@@ -2,11 +2,15 @@
 // board_daisy.cpp.
 #include "board.h"
 
+#include <cstdint>
+
 float nidhogg_knob_value(int knob);
 int   nidhogg_knob_page(int knob);
 bool  nidhogg_menu_active();
 bool  nidhogg_pitch_quantized();
 bool  nidhogg_ready();
+void  nidhogg_meters(float* in, float* out);
+uint32_t nidhogg_clock_ticks();
 void  nidhogg_state(int* s);
 
 void board_firmware_attach()
@@ -47,6 +51,8 @@ Status status()
         st.knob_value[k] = nidhogg_knob_value(k);
         st.pot_picked[k] = pot_picked(k);
     }
+    nidhogg_meters(&st.meter_in, &st.meter_out);
+    st.clock_ticks = nidhogg_clock_ticks();
     st.menu = nidhogg_menu_active();
     nidhogg_state(st.state);
     return st;
