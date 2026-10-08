@@ -7,7 +7,7 @@ Reference specs: [chompi-tape](ref/chompi-tape.md), [chompi-tempo](ref/chompi-te
 ## How it fits together
 
 ```
- OMX-27 (host mode) --USB MIDI--> matron (nidhogg.lua) --OSC--> nidhogg-tape / -tempo / -wave
+ OMX-27 (REMOTE)    --USB MIDI--> matron (nidhogg.lua) --OSC--> nidhogg-tape / -tempo / -wave
         <--LEDs, OLED sysex--           |    <--LEDs, MIDI out--        (Chompi firmware + Daisy shim)
                                         |                                       |
                                norns screen, keys,                     JACK client, 48 kHz
@@ -28,9 +28,11 @@ Each firmware builds as its own program from Chompi's source, with as few change
 - Credits and licence notices from Chompi's `THIRD_PARTY.md` come along with the code.
 - Builds on x86 for an offline harness (scripted key events in, wav out) and natively on the norns for real use. One armv7 binary covers Pi 3 and Pi 4 (`-mcpu=cortex-a53`).
 
-### 2. OMX-27 host mode
+### 2. OMX-27 in REMOTE mode
 
-A new mode in the OMX-27 firmware (our fork), built for all three boards: v1 Teensy 3.2, v2 Teensy 4.0 and v3 RP2040. Keys, encoder and pots send fixed messages, and the norns sets every key LED and the OLED by sysex. Details are in [omx27](ref/omx27.md#host-mode-a-minimal-firmware-change). Other modes stay as they are.
+No OMX-27 firmware work of our own. Quixotic7's fork (github.com/Quixotic7/OMX-27) has a REMOTE mode from v1.15.4: the norns owns all 27 key LEDs and the 128x32 OLED, and gets every key (down, up, hold, quick), the encoder, its button and the 5 pots at 14 bits. Release builds exist for all three boards (RP2040 `.uf2`, Teensy 4.0 and 3.2 `.hex`). The protocol is in that repo's `SYSEX_SPEC.md`, "REMOTE mode".
+
+nidhogg talks to it with its own small Lua client written from that spec, since neither OMX-27 repo has a licence file. Exit REMOTE mode on the OMX-27 with AUX + hold the encoder button.
 
 ### 3. nidhogg.lua
 
@@ -59,7 +61,7 @@ Chompi's knobs are endless encoders with up to 3 pages each, and the pots are ab
 
 1. **Spike:** TAPE builds on Linux with the shim and renders a note from a factory sample offline. Check the threading risk.
 2. **TAPE on norns:** runs as a JACK client, played from the norns and a plain MIDI keyboard. Measure CPU on the Pi 4, and with headroom for a Pi 3.
-3. **OMX-27 host mode:** RP2040 build flashed and tested on Dan's unit. Teensy builds compile.
+3. **OMX-27 client:** Lua client for REMOTE mode, tested on Dan's RP2040 unit with Quixotic7 v1.15.7.
 4. **TAPE complete:** full OMX-27 mapping, screen, MIDI and options.
 5. **TEMPO**, then **WAVE**, and switching between modes.
 6. **Packaging:** prebuilt binaries in the repo, install and the factory card contents.

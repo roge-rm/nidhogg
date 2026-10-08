@@ -1,5 +1,7 @@
 # OMX-27 as the nidhogg control surface
 
+Update: nidhogg uses Quixotic7's fork (github.com/Quixotic7/OMX-27, v1.15.4 and later) in its REMOTE mode, which already gives the host the LEDs, the OLED and raw input on all three boards. The host-mode proposal below is not needed. The rest of this file describes okyeron's tree and still holds for the hardware.
+
 Notes from reading the OMX-27 repo (firmware 1.15.0, `src/config.h:24-26`, EEPROM version 38, `src/config.cpp:5`).
 
 Paths are relative to `/home/dan/Projects/norns/nidhogg-ref/omx27`. `src/` means `OMX-27-firmware/src/`, `.ino` means `OMX-27-firmware/OMX-27-firmware.ino`.
