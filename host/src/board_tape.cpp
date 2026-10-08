@@ -373,10 +373,11 @@ void pots_hook()
 
         if(k == 0 && page == 0 && quant)
         {
-            // Quantised pitch steps by fifths and fourths, so the pot steps too:
-            // 24 steps over a full sweep.
+            // Quantised pitch steps by fifths and fourths, one step per 4
+            // detents, so the pot steps too: 20 steps over a full sweep, about
+            // 2x reverse to 2x forward.
             if(t != prev)
-                post_relative(p, k, t - prev, 24.f);
+                post_relative(p, k, t - prev, 80.f);
             continue;
         }
 
