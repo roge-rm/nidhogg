@@ -41,6 +41,7 @@ local OMX_TO_SW = {
 }
 -- OMX pot -> Chompi knob: Pitch 0, Start 1, End 2, Magic 3, Volume 5
 local POT_TO_KNOB = {[0] = 0, 1, 2, 3, 5}
+local pot_anchor = {} -- pot position when it last woke the screensaver, by knob
 -- Chompi knob -> hardware encoder, for pushes:
 -- Pitch SW4, Start SW1, End SW2, Magic SW3, Transport SW5, Volume SW6
 local KNOB_TO_ENC = {[0] = 3, 0, 1, 2, 4, 5}
@@ -138,8 +139,12 @@ local function start_omx()
   omx.pot = function(n, v, hires)
     local knob = POT_TO_KNOB[n]
     local pos = hires / 16383
-    -- a jittering pot shouldn't keep the screensaver away
-    if not s.pot[knob] or math.abs(pos - s.pot[knob]) > 0.01 then saver.touch() end
+    -- a jittering pot shouldn't keep the screensaver away: only count it once
+    -- it has moved 1% from where it last counted
+    if not pot_anchor[knob] or math.abs(pos - pot_anchor[knob]) > 0.01 then
+      pot_anchor[knob] = pos
+      saver.touch()
+    end
     s.pot[knob] = pos
     if k1_held then
       local enc = KNOB_TO_ENC[knob]
