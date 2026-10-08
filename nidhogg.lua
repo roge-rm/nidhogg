@@ -1,7 +1,8 @@
 -- nidhogg
 -- Chompi on norns
 --
--- test build: TAPE only
+-- TAPE, TEMPO and WAVE: pick one
+-- in PARAMS > firmware
 -- OMX-27 in REMOTE mode: keys,
 -- AUX = CHOMPI, encoder = transport,
 -- pots = pitch start end magic volume
@@ -21,8 +22,10 @@ local omx = include("lib/omx")
 local view = include("lib/view")
 local saver = include("lib/saver")
 local options = include("lib/options")
+local modes = include("lib/modes")
 
-local OSC_PORT = 57140 -- TAPE
+local M = modes.tape -- the firmware running now
+local switch_firmware
 local SW = {PLAY = 33, LOOP = 34}
 local ENC = {TRANSPORT = 4, VOLUME = 5} -- hardware encoders SW5, SW6
 
@@ -56,17 +59,20 @@ local running = false -- true once the firmware is going
 local load_avg, load_max = 0, 0
 
 -- Firmware state from the bridge, plus what the screens need to know here.
-local s = {
-  knob_page = {}, knob_value = {}, picked = {}, pot = {},
-  menu = false, mode = 0, bank = 0, voice_bank = 0, slot = 15, input = 1,
-  fx_pre = false, monitor = 0, looper = 0, sample_rec = false,
-  looper_pos = 0, dub = 1, record_switch = false,
-  focus = nil, focus_time = 0,
-}
+local s
+local function reset_state()
+  s = {
+    knob_page = {}, knob_value = {}, picked = {}, pot = {},
+    menu = false, st = {}, looper_pos = 0, dub = 1, record_switch = false,
+    focus = nil, focus_time = 0,
+  }
+end
+reset_state()
 
 local function bank_color()
-  if s.mode == 0 and s.slot == 15 then return PINK end
-  return BANK_COLORS[s.voice_bank] or BANK_COLORS[0]
+  local bank = M.bank_color_slot(s)
+  if bank == nil then return PINK end
+  return BANK_COLORS[bank] or BANK_COLORS[0]
 end
 
 -- K1 or OMX key 11 held: moving a pot pushes its knob instead of turning it.
@@ -78,7 +84,7 @@ local pot_from = {} -- pot position when the hold began, by knob
 local pushing = {}  -- encoders pushed during this hold
 
 local function send(path, args)
-  osc.send({"127.0.0.1", OSC_PORT}, path, args)
+  osc.send({"127.0.0.1", M.port}, path, args)
 end
 
 local function push_hold(who, held)
@@ -184,12 +190,31 @@ local function add_params()
     end
   end)
 
+  params:add_option("firmware", "firmware", {"TAPE", "TEMPO", "WAVE"}, 1)
+  params:set_action("firmware", function(i)
+    if running then switch_firmware(modes.order[i]) end
+  end)
+
   options.add_params(install.card_dir("tape"))
+end
+
+-- Switches to another firmware. The one left behind pauses, keeping its
+-- state, and carries on when chosen again.
+switch_firmware = function(fw)
+  M = modes[fw]
+  reset_state()
+  engine.start(fw)
+  send("/switch", {0})
+  clock.run(function()
+    clock.sleep(0.3)
+    send("/hello", {})
+  end)
 end
 
 -- Runs the firmware once everything is in place.
 local function start()
-  engine.start("tape")
+  M = modes[modes.order[params:get("firmware")]]
+  engine.start(modes.order[params:get("firmware")])
   start_omx()
   running = true
   -- a reloaded script has none of the firmware's state yet
@@ -285,9 +310,7 @@ function osc.event(path, args, from)
     s.picked[args[1]] = args[2] == 1
   elseif path == "/state" then
     s.menu = args[1] == 1
-    s.mode, s.bank, s.voice_bank, s.slot = args[2], args[3], args[4], args[5]
-    s.input, s.fx_pre, s.monitor = args[6], args[7] == 1, args[8]
-    s.looper, s.sample_rec = args[9], args[10] == 1
+    for i = 1, 10 do s.st[i] = args[i + 1] end
   elseif path == "/looper" then
     s.looper_pos, s.dub = args[1], args[2]
   elseif path == "/midi" then
@@ -357,10 +380,10 @@ function redraw()
     screen.clear()
     saver.draw()
   else
-    view.omx(s)
+    view.omx(s, M)
     omx.screen_send(0, 0)
     screen.clear()
-    view.info(s)
+    view.info(s, M)
     view.panel(leds)
   end
   screen.update()

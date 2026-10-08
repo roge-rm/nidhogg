@@ -1,0 +1,52 @@
+--- a/ui.h
++++ b/ui.h
+@@ -366,6 +366,13 @@
+     BootPage boot_page_;
+     NormalPage normal_page_;
+     MenuPage menu_page_;
++#ifdef NIDHOGG_HOST
++    // Knob access for nidhogg's absolute pots. Call from the audio callback,
++    // like GenerateEvents.
++    float HostKnobValue(int knob) const { return enc_values[knob_page[knob]][knob]; }
++    int HostKnobPage(int knob) const { return knob_page[knob]; }
++    void HostTurn(int knob, int turns) { event_queue.AddEncoderTurned(knob, turns, 0); }
++#endif
+     TestPage test_page_;
+     NoSDPage no_sd_page_;
+     RainbowPage rainbow_page_;
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -488,4 +488,31 @@
+     {
+         MainLoop(nullptr);
+     }
+-}
+\ No newline at end of file
++}
++
++#ifdef NIDHOGG_HOST
++// For the host's board code. Knob access is called in the audio context; the
++// rest is read outside it, so a value can be a block old.
++float nidhogg_knob_value(int knob) { return ui.HostKnobValue(knob); }
++int nidhogg_knob_page(int knob) { return ui.HostKnobPage(knob); }
++bool nidhogg_menu_active() { return ui.menu_page_.IsActive(); }
++void nidhogg_turn(int knob, int turns) { ui.HostTurn(knob, turns); }
++// Only valid once the boot is done: everything is set up before.
++bool nidhogg_ready() { return !booting; }
++bool nidhogg_pitch_quantized() { return !options.pitch_shift_quantization; }
++// TEMPO state: engine (0 chromatic, 1 slice), input, monitor, recording,
++// tempo, clock mode, play type, latch, pattern, rest mode.
++void nidhogg_state(int* s)
++{
++    s[0] = int(fx.getEngine());
++    s[1] = int(fx.getInputSource());
++    s[2] = int(fx.getMonitorMode());
++    s[3] = fx.getRecording();
++    s[4] = cManager.getTempo();
++    s[5] = cManager.getClockMode();
++    s[6] = int(arpSeq.getPlayType());
++    s[7] = arpSeq.getLatch();
++    s[8] = arpSeq.getPattern();
++    s[9] = arpSeq.getRestMode();
++}
++#endif

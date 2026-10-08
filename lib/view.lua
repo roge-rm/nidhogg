@@ -1,55 +1,9 @@
--- Drawing for TAPE. view.omx draws the OMX-27's 128x32 screen: only the
--- basics, in double-size text, at full brightness. view.info and view.panel
--- draw the norns screen: the details, then Chompi's panel lights.
+-- Drawing, for whichever firmware is running (lib/modes.lua). view.omx draws
+-- the OMX-27's 128x32 screen: only the basics, in double-size text, at full
+-- brightness. view.info and view.panel draw the norns screen: the details,
+-- then Chompi's panel lights.
 
 local view = {}
-
-local KNOBS = {
-  [0] = {name = "PITCH", pages = {"speed", "gain"}},
-  [1] = {name = "START", pages = {"start", "attack"}},
-  [2] = {name = "END", pages = {"end", "release"}},
-  [3] = {name = "MAGIC", pages = {"verb + delay", "lo-fi", "filter"}},
-  [4] = {name = "TRANSPORT", pages = {"speed"}},
-  [5] = {name = "VOLUME", pages = {"volume", "input gain"}},
-}
--- What each pot does with CHOMPI held, by knob page.
-local SHIFT_POTS = {
-  [0] = {"tune", "pan"},
-  [1] = {"move", "a + r"},
-  [2] = {"move", "a + r"},
-  [3] = {"time", "warble", "reso"},
-  [5] = {"comp", "comp"},
-}
-local SHIFT_KEYS = {"jammi", "cubbi", "mic", "line", "rsmp", "pre", "post", "erase", "copy", "save"}
-local MODES = {[0] = "JAMMI", "CUBBI"}
-local BANKS = {[0] = "a", "b", "c", "d", "e"}
-local INPUTS = {[0] = "mic", "line", "resample"}
-local LOOPER = {[0] = "empty", "armed", "recording", "overdub", "playing", "paused"}
-
--- Chompi's free pitch curve (DSPEngine.h): knob 0-1 to speed, negative is
--- reverse.
-local function pitch_speed(v)
-  local x = 2 * v - 1
-  local s = x < 0 and -1 or 1
-  local a = math.abs(x)
-  if a < 0.33 then return x * 1.484848 + 0.01 * s end
-  if a < 0.66 then return (x - 0.33 * s) * 1.515151 + 0.5 * s end
-  return (x - 0.66 * s) * 2.941176 + 1.0 * s
-end
-
-local function speed_text(p)
-  return string.format("%.2fx%s", math.abs(p), p < 0 and " rev" or "")
-end
-
-local function value_text(k, page, v)
-  if k == 0 and page == 0 then return speed_text(pitch_speed(v)) end
-  if k == 4 then return speed_text(4 * v - 2) end
-  if k == 3 and page == 2 then
-    if math.abs(v - 0.5) < 0.02 then return "off" end
-    return string.format("%s %d", v < 0.5 and "low" or "high", math.floor(math.abs(v - 0.5) * 200 + 0.5))
-  end
-  return string.format("%d", math.floor(v * 100 + 0.5))
-end
 
 local function text(x, y, s, align)
   screen.move(x, y)
@@ -60,129 +14,22 @@ end
 
 -- A label in a box, filled when `on`.
 local function chip(x, y, w, s, on)
+  screen.level(15)
   if on then
-    screen.level(15)
     screen.rect(x, y - 6, w - 1, 8)
     screen.fill()
     screen.level(0)
-  else
-    screen.level(15)
   end
   text(x + (w - 1) / 2, y, s, "center")
   screen.level(15)
 end
 
-local function draw_shift(s)
-  screen.level(15)
-  text(0, 6, "SHIFT")
-  text(127, 6, (MODES[s.mode] or "") .. " " .. (BANKS[s.bank] or ""), "right")
-  for i = 1, 10 do
-    local on = (i == 1 and s.mode == 0) or (i == 2 and s.mode == 1)
-      or (i >= 3 and i <= 5 and s.input == i - 3)
-      or (i == 6 and s.fx_pre) or (i == 7 and not s.fx_pre)
-    local col = (i - 1) % 5
-    chip(col * 25, i <= 5 and 15 or 24, 26, SHIFT_KEYS[i], on)
-  end
-  screen.level(15)
-  local x = 0
-  for _, k in ipairs({0, 1, 2, 3, 5}) do
-    local labels = SHIFT_POTS[k]
-    text(x + 12, 32, labels[(s.knob_page[k] or 0) + 1] or labels[1], "center")
-    x = x + 25
-  end
-end
-
-local function draw_knob(s, k)
-  local knob = KNOBS[k]
-  local page = s.knob_page[k] or 0
-  local v = s.knob_value[k] or 0
-  screen.level(15)
-  text(0, 6, knob.name)
-  text(127, 6, value_text(k, page, v), "right")
-  -- the bar
-  screen.rect(0.5, 10.5, 127, 8)
+-- An outlined bar filled to v.
+local function bar(x, y, w, h, v)
+  screen.rect(x + 0.5, y + 0.5, w, h)
   screen.stroke()
-  screen.rect(1, 11, math.floor(v * 126 + 0.5), 7)
+  screen.rect(x + 1, y + 1, math.floor(v * (w - 1) + 0.5), h - 1)
   screen.fill()
-  if (k == 3 and page == 2) or (k == 0 and page == 0) or k == 4 then
-    -- middle mark: filter off, pitch and transport stopped
-    screen.level(0)
-    screen.rect(63, 11, 1, 7)
-    screen.fill()
-    screen.level(15)
-    screen.rect(63, 19, 1, 2)
-    screen.fill()
-  end
-  -- page dots
-  for p = 1, #knob.pages do
-    screen.rect(2 + (p - 1) * 6, 25, 3, 3)
-    if p == page + 1 then screen.fill() else screen.stroke() end
-  end
-  text(24, 30, knob.pages[page + 1] or "")
-  -- a pot that hasn't taken over yet: where it is, and which way to sweep
-  local pot = s.pot[k]
-  if pot and not s.picked[k] and k ~= 4 then
-    local x = math.floor(pot * 126 + 1.5)
-    screen.move(x - 2, 23)
-    screen.line(x + 2, 23)
-    screen.line(x, 20)
-    screen.close()
-    screen.fill()
-    text(127, 30, pot < v and "sweep >" or "< sweep", "right")
-  end
-end
-
-local function draw_home(s)
-  screen.level(15)
-  local slot = s.slot == 15 and "RAM" or tostring(s.slot)
-  text(1, 6, string.format("%s  %s  %s", MODES[s.mode] or "", BANKS[s.voice_bank] or "", slot))
-  chip(102, 6, 26, s.record_switch and "REC" or "PLAY", s.record_switch)
-  local fx = s.fx_pre and "fx > looper" or "looper > fx"
-  text(1, 16, "in " .. (INPUTS[s.input] or ""))
-  text(127, 16, fx, "right")
-  -- looper
-  text(1, 28, LOOPER[s.looper] or "")
-  if s.looper ~= 0 and s.looper ~= 1 then
-    screen.rect(54.5, 22.5, 73, 6)
-    screen.stroke()
-    screen.rect(55, 23, math.floor((s.looper_pos or 0) * 72 + 0.5), 5)
-    screen.fill()
-  end
-  if s.sample_rec then
-    chip(54, 28, 46, "SAMPLING", true)
-  end
-end
-
--- ---- OMX-27 screen -----------------------------------------------------------
-
--- Short page names for the big text.
-local BIG_PAGES = {
-  [0] = {"PITCH", "GAIN"},
-  [1] = {"START", "ATTACK"},
-  [2] = {"END", "RELEASE"},
-  [3] = {"VERB", "LO-FI", "FILTER"},
-  [4] = {"SPEED"},
-  [5] = {"VOLUME", "INPUT"},
-}
-
-local function big()
-  screen.font_face(1)
-  screen.font_size(16)
-  screen.level(15)
-end
-
--- A thick bar from y 19 to 31.
-local function big_bar(v, mark_middle)
-  screen.rect(0.5, 19.5, 127, 12)
-  screen.stroke()
-  screen.rect(2, 21, math.floor(v * 124 + 0.5), 9)
-  screen.fill()
-  if mark_middle then
-    screen.level(0)
-    screen.rect(63, 21, 2, 9)
-    screen.fill()
-    screen.level(15)
-  end
 end
 
 -- Looper state as a shape in the 12x12 box at (x, 19).
@@ -206,20 +53,47 @@ local function looper_icon(state, x)
   end
 end
 
-function view.omx(s)
-  big()
+-- For the firmware's own home screens.
+local ui = {text = text, chip = chip, bar = bar}
+
+-- The OMX looper line: symbol and a thick position bar, or EMPTY.
+function ui.looper(state, pos)
+  looper_icon(state, 0)
+  if state and state >= 2 then
+    bar(16, 19, 111, 12, pos or 0)
+  elseif state == 0 then
+    text(18, 30, "EMPTY")
+  end
+end
+
+local function knob_active(s)
+  return s.focus and util.time() - s.focus_time < 2
+end
+
+-- ---- OMX-27 screen -----------------------------------------------------------
+
+function view.omx(s, M)
+  screen.font_face(1)
+  screen.font_size(16)
+  screen.level(15)
   if s.menu then
     text(0, 13, "SHIFT")
-    text(127, 13, string.upper((MODES[s.mode] or ""):sub(1, 3) .. " " .. (BANKS[s.bank] or "")), "right")
-    text(0, 30, string.upper(INPUTS[s.input] or ""))
-    text(127, 30, s.fx_pre and "PRE" or "POST", "right")
-  elseif s.focus and util.time() - s.focus_time < 2 then
+    text(127, 13, string.upper(M.shift_title(s)), "right")
+  elseif knob_active(s) then
     local k = s.focus
     local page = s.knob_page[k] or 0
     local v = s.knob_value[k] or 0
-    text(0, 13, (BIG_PAGES[k] or {})[page + 1] or "")
-    text(127, 13, string.upper(value_text(k, page, v)):gsub(" REV", "<"), "right")
-    big_bar(v, (k == 3 and page == 2) or (k == 0 and page == 0) or k == 4)
+    local knob = M.knobs[k]
+    text(0, 13, knob.big[page + 1] or knob.name)
+    local value = string.upper(M.value(k, page, v, s)):gsub(" REV", "<"):gsub(" BPM", "")
+    text(127, 13, value, "right")
+    bar(0, 19, 127, 12, v)
+    if M.middle_mark(k, page) then
+      screen.level(0)
+      screen.rect(63, 21, 2, 9)
+      screen.fill()
+      screen.level(15)
+    end
     local pot = s.pot[k]
     if pot and not s.picked[k] and k ~= 4 then
       -- where the pot is: a gap in the bar
@@ -232,21 +106,12 @@ function view.omx(s)
       screen.fill()
     end
   else
-    local slot = s.slot == 15 and "RAM" or tostring(s.slot)
-    text(0, 13, string.upper(BANKS[s.voice_bank] or "") .. " " .. slot)
-    if s.sample_rec then
-      if math.floor(util.time() * 3) % 2 == 0 then text(127, 13, "REC", "right") end
-    elseif s.record_switch then
-      text(127, 13, "REC", "right")
-    end
-    looper_icon(s.looper, 0)
-    if s.looper >= 2 then
-      screen.rect(16.5, 19.5, 111, 12)
-      screen.stroke()
-      screen.rect(18, 21, math.floor((s.looper_pos or 0) * 108 + 0.5), 9)
-      screen.fill()
-    elseif s.looper == 0 then
-      text(18, 30, "EMPTY")
+    M.omx_home(s, ui)
+    -- TAPE's top right shows the switch; REC flashes while sampling
+    if M.name == "TAPE" and s.record_switch then
+      if not M.recording(s) or math.floor(util.time() * 3) % 2 == 0 then
+        text(127, 13, "REC", "right")
+      end
     end
   end
   screen.font_size(8)
@@ -254,21 +119,79 @@ end
 
 -- ---- norns screen --------------------------------------------------------------
 
+local function draw_shift(s, M)
+  screen.level(15)
+  text(1, 6, "SHIFT  " .. M.name)
+  text(127, 6, M.shift_title(s), "right")
+  for i = 1, 10 do
+    local col = (i - 1) % 5
+    chip(col * 25, i <= 5 and 15 or 24, 26, M.shift_keys[i], M.shift_on(s, i))
+  end
+  local x = 0
+  for _, k in ipairs({0, 1, 2, 3, 5}) do
+    local labels = M.shift_pots[k]
+    if labels then
+      text(x + 12, 32, labels[(s.knob_page[k] or 0) + 1] or labels[1], "center")
+    end
+    x = x + 25
+  end
+end
+
+local function draw_knob(s, M, k)
+  local knob = M.knobs[k]
+  local page = s.knob_page[k] or 0
+  local v = s.knob_value[k] or 0
+  screen.level(15)
+  text(1, 6, knob.name)
+  text(127, 6, M.value(k, page, v, s), "right")
+  bar(0, 10, 127, 8, v)
+  if M.middle_mark(k, page) then
+    screen.level(0)
+    screen.rect(63, 11, 1, 7)
+    screen.fill()
+    screen.level(15)
+    screen.rect(63, 19, 1, 2)
+    screen.fill()
+  end
+  for p = 1, #knob.pages do
+    screen.rect(2 + (p - 1) * 6, 25, 3, 3)
+    if p == page + 1 then screen.fill() else screen.stroke() end
+  end
+  text(24, 30, knob.pages[page + 1] or "")
+  local pot = s.pot[k]
+  if pot and not s.picked[k] and k ~= 4 then
+    local x = math.floor(pot * 126 + 1.5)
+    screen.move(x - 2, 23)
+    screen.line(x + 2, 23)
+    screen.line(x, 20)
+    screen.close()
+    screen.fill()
+    text(127, 30, pot < v and "sweep >" or "< sweep", "right")
+  end
+end
+
 -- The top 128x32 of the norns screen: the details.
-function view.info(s)
+function view.info(s, M)
   if s.menu then
-    draw_shift(s)
-  elseif s.focus and util.time() - s.focus_time < 2 then
-    draw_knob(s, s.focus)
+    draw_shift(s, M)
+  elseif knob_active(s) then
+    draw_knob(s, M, s.focus)
   else
-    draw_home(s)
+    screen.level(15)
+    M.home(s, ui)
+    local label = s.record_switch and M.switch[2] or M.switch[1]
+    if M.name == "TAPE" then
+      chip(102, 6, 26, label, s.record_switch)
+    else
+      chip(96, 28, 32, label, s.record_switch)
+    end
   end
 end
 
 -- Chompi's panel lights, from the 105-byte LED string: 10 panel lights, then
 -- 25 key lights in Chompi's chain order.
 local PANEL = {
-  -- {led, x}: CHOMPI, Pitch, Start, End, Magic, Transport rev/fwd, PLAY,
+  -- {light, x}: CHOMPI, Pitch, Start, End, Magic, Transport left/right, PLAY,
   -- LOOP, Volume
   {0, 6}, {1, 22}, {2, 34}, {3, 46}, {4, 58}, {5, 74}, {6, 80}, {7, 96}, {8, 108}, {9, 122},
 }

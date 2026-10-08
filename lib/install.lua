@@ -12,7 +12,7 @@
 local install = {}
 
 local EXT = "/home/we/.local/share/SuperCollider/Extensions/nidhogg/"
-local PLUGINS = {"NidhoggTape.so"}
+local PLUGINS = {"NidhoggTape.so", "NidhoggTempo.so", "NidhoggWave.so"}
 local CARDS = _path.audio .. "nidhogg/"
 local REPO = "https://github.com/CHOMPI-Club/CHOMPI"
 local PROFILES = {tape = "tape-2.0", tempo = "tempo-1.0", wave = "wave-1.0"}
@@ -99,16 +99,22 @@ function install.plugins()
   return changed
 end
 
--- Restarts norns the way SYSTEM > RESTART does, but comes back into this
--- script.
+-- Restarts SuperCollider so it loads new plugins and engine classes, then
+-- reloads this script into it. matron keeps running through this, so the
+-- script waits for the new server and reloads itself.
 function install.restart()
   local script = norns.state.script
-  local clear = norns.script.clear
-  norns.script.clear = function(...)
-    clear(...)
-    norns.state.script = script
-  end
-  _norns.restart()
+  os.execute("sudo systemctl restart norns-sclang.service &")
+  clock.run(function()
+    -- give the old server time to go, then wait for the new one
+    clock.sleep(5)
+    for _ = 1, 60 do
+      if os.execute("pgrep -x scsynth > /dev/null") then break end
+      clock.sleep(1)
+    end
+    clock.sleep(4)
+    norns.script.load(script)
+  end)
 end
 
 return install

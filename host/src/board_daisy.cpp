@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cmath>
 #include <cstring>
 #include <mutex>
 
@@ -208,6 +209,14 @@ constexpr int kSwTog    = 6;
 // In board_<firmware>.cpp.
 void board_firmware_attach();
 
+// From each firmware's host patch (chompi_main.cpp). Knobs are Chompi's
+// logical knobs 0-5: Pitch, Start, End, Magic, Transport/Tempo, Volume.
+float nidhogg_knob_value(int knob);
+int   nidhogg_knob_page(int knob);
+bool  nidhogg_menu_active();
+bool  nidhogg_ready();
+void  nidhogg_turn(int knob, int turns);
+
 namespace board
 {
 
@@ -271,6 +280,145 @@ Leds leds()
         for(int c = 0; c < 3; c++)
             l.keys[i][c] = uint8_t(std::min(255, chompi::led_smt_data[i][c] * 4));
     return l;
+}
+
+} // namespace board
+
+// ---- absolute pots ------------------------------------------------------------
+//
+// Chompi's knobs are endless encoders. A pot moves its knob by posting turns
+// to the firmware's own event queue, as a fast spin of the encoder would. It
+// posts, waits until the firmware has applied the turns, then corrects from
+// the knob's real value, so knobs whose step changes as they move still land
+// where the pot is. A pot takes over once it passes the knob's value, and lets
+// go when the knob's page changes or the firmware changes the value itself
+// (a preset load). Knobs marked relative, and every knob while the shift menu
+// is open, follow how far the pot moves instead.
+
+namespace
+{
+
+struct Pot
+{
+    std::atomic<float> target{-1.f};
+    float              last     = -1.f;
+    bool               picked   = false;
+    int                page     = -1;
+    float              rel      = 0.f;   // relative turns not yet posted
+    bool               waiting  = false; // turns posted, not yet applied
+    float              posted_from = 0.f;
+    uint64_t           posted_at = 0;
+    float              settled  = 0.f;   // value after our last turns landed
+};
+Pot pots[6];
+
+// Turns one physical detent posts (UserInterface::GenerateEvents).
+int detent_turns(int knob)
+{
+    return (knob == 0 || knob == 4) ? 1 : 3;
+}
+
+void post_relative(Pot& p, int knob, float delta, float turns_per_sweep)
+{
+    p.rel += delta * turns_per_sweep;
+    int n = int(p.rel);
+    if(n != 0)
+    {
+        p.rel -= n;
+        nidhogg_turn(knob, n);
+    }
+}
+
+void pots_hook()
+{
+    if(!nidhogg_ready())
+        return;
+    const bool     menu = nidhogg_menu_active();
+    const uint64_t now  = vhw::now_us();
+    for(int k = 0; k < 6; k++)
+    {
+        Pot&  p = pots[k];
+        float t = p.target;
+        if(t < 0.f)
+            continue;
+        if(p.last < 0.f)
+        {
+            p.last = t; // first reading: wait for the pot to reach the knob
+            continue;
+        }
+        const float prev = p.last;
+        p.last           = t;
+        const int   page = nidhogg_knob_page(k);
+        const float v    = nidhogg_knob_value(k);
+        const board::KnobFeel feel = board::knob_feel(k, page, menu);
+
+        if(menu || feel.relative)
+        {
+            p.picked  = false;
+            p.waiting = false;
+            if(t != prev)
+                post_relative(p, k, t - prev, feel.relative_turns);
+            continue;
+        }
+        if(page != p.page)
+        {
+            p.page    = page;
+            p.picked  = false;
+            p.waiting = false;
+        }
+        if(p.waiting)
+        {
+            // landed once the value moves, or give up after 40 ms
+            if(v == p.posted_from && now - p.posted_at < 40000)
+                continue;
+            p.waiting = false;
+            p.settled = v;
+        }
+        else if(p.picked && std::fabs(v - p.settled) > 0.02f)
+            p.picked = false; // the firmware changed it itself
+
+        if(!p.picked)
+        {
+            if((prev - v) * (t - v) <= 0.f || std::fabs(t - v) < feel.step)
+            {
+                p.picked  = true;
+                p.settled = v;
+            }
+            else
+                continue;
+        }
+        float gap = t - v;
+        if(std::fabs(gap) < feel.step * 0.5f)
+            continue;
+        int n = int(std::lround(gap / feel.step));
+        if(n == 0)
+            continue;
+        nidhogg_turn(k, n);
+        p.waiting     = true;
+        p.posted_from = v;
+        p.posted_at   = now;
+    }
+}
+
+} // namespace
+
+namespace board
+{
+
+void pot(int knob, float value)
+{
+    if(knob >= 0 && knob < 6)
+        pots[knob].target = std::min(1.f, std::max(0.f, value));
+}
+
+bool pot_picked(int knob)
+{
+    return knob >= 0 && knob < 6 && pots[knob].picked;
+}
+
+void attach_pots()
+{
+    vhw::set_pre_audio_hook(pots_hook);
 }
 
 } // namespace board

@@ -1,18 +1,54 @@
 // WAVE's pots and status for the norns. The panel itself is in
-// board_daisy.cpp. Pots and status come later; for now the firmware runs
-// from keys and encoder turns.
+// board_daisy.cpp.
 #include "board.h"
 
-void board_firmware_attach() {}
+float nidhogg_knob_value(int knob);
+int   nidhogg_knob_page(int knob);
+bool  nidhogg_menu_active();
+bool  nidhogg_pitch_quantized();
+bool  nidhogg_ready();
+void  nidhogg_state(int* s);
+
+void board_firmware_attach()
+{
+    board::attach_pots();
+}
 
 namespace board
 {
 
-void pot(int, float) {}
+// Value change per turn on WAVE's normal page (NormalPage.h:700-750). Fine
+// pitch moves .003 a turn; the wavetable frame steps one per turn over 33
+// frames; the tempo knob steps, so its pot is relative.
+KnobFeel knob_feel(int knob, int page, bool menu)
+{
+    if(menu)
+        return {0.01f, true, 100.f};
+    if(knob == 0 && page == 0)
+        return {0.003f, false, 0.f};
+    if(knob == 0 && page == 1)
+        return {1.f / 33.f, true, 33.f};
+    if((knob == 1 || knob == 2) && page == 0)
+        return {0.003f, false, 0.f};
+    if(knob == 4)
+        return {0.003125f, true, 320.f};
+    return {0.01f, false, 0.f};
+}
 
 Status status()
 {
     Status st{};
+    st.ready = nidhogg_ready();
+    if(!st.ready)
+        return st;
+    for(int k = 0; k < 6; k++)
+    {
+        st.knob_page[k]  = nidhogg_knob_page(k);
+        st.knob_value[k] = nidhogg_knob_value(k);
+        st.pot_picked[k] = pot_picked(k);
+    }
+    st.menu = nidhogg_menu_active();
+    nidhogg_state(st.state);
     return st;
 }
 

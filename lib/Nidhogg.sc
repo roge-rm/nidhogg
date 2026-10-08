@@ -11,3 +11,23 @@ NidhoggTape : MultiOutUGen {
         ^this.initOutputs(2, rate)
     }
 }
+
+NidhoggTempo : MultiOutUGen {
+    *ar { arg inL, inR;
+        ^this.multiNew('audio', inL, inR)
+    }
+    init { arg ... theInputs;
+        inputs = theInputs;
+        ^this.initOutputs(2, rate)
+    }
+}
+
+NidhoggWave : MultiOutUGen {
+    *ar { arg inL, inR;
+        ^this.multiNew('audio', inL, inR)
+    }
+    init { arg ... theInputs;
+        inputs = theInputs;
+        ^this.initOutputs(2, rate)
+    }
+}

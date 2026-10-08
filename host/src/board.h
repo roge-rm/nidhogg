@@ -23,6 +23,17 @@ void set_switch(bool record);
 // An absolute pot for logical knob 0-5 (Pitch, Start, End, Magic, Transport,
 // Volume), value 0-1.
 void pot(int knob, float value);
+bool pot_picked(int knob);
+void attach_pots();
+
+// How a knob responds to turns, from each firmware's board file.
+struct KnobFeel
+{
+    float step;           // value change per turn; a little high is fine
+    bool  relative;       // follow pot movement instead of setting a value
+    float relative_turns; // turns for a full sweep when relative
+};
+KnobFeel knob_feel(int knob, int page, bool menu);
 Leds leds();
 
 // Firmware state for the norns and OMX-27 screens.

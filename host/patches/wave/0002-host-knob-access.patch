@@ -1,0 +1,52 @@
+--- a/ui.h
++++ b/ui.h
+@@ -383,6 +383,13 @@
+     BootPage boot_page_;
+     NormalPage normal_page_;
+     MenuPage menu_page_;
++#ifdef NIDHOGG_HOST
++    // Knob access for nidhogg's absolute pots. Call from the audio callback,
++    // like GenerateEvents.
++    float HostKnobValue(int knob) const { return enc_values[knob_page[knob]][knob]; }
++    int HostKnobPage(int knob) const { return knob_page[knob]; }
++    void HostTurn(int knob, int turns) { event_queue.AddEncoderTurned(knob, turns, 0); }
++#endif
+     TestPage test_page_;
+     NoSDPage no_sd_page_;
+     RainbowPage rainbow_page_;
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -431,4 +431,31 @@
+     {
+         MainLoop(nullptr);
+     }
+-}
+\ No newline at end of file
++}
++
++#ifdef NIDHOGG_HOST
++// For the host's board code. Knob access is called in the audio context; the
++// rest is read outside it, so a value can be a block old.
++float nidhogg_knob_value(int knob) { return ui.HostKnobValue(knob); }
++int nidhogg_knob_page(int knob) { return ui.HostKnobPage(knob); }
++bool nidhogg_menu_active() { return ui.menu_page_.IsActive(); }
++void nidhogg_turn(int knob, int turns) { ui.HostTurn(knob, turns); }
++// Only valid once the boot is done: everything is set up before.
++bool nidhogg_ready() { return !booting; }
++bool nidhogg_pitch_quantized() { return false; }
++// WAVE state: preset slot, tempo, sequencer playing, recording, octave,
++// wavetable frame, table, pitch LFO on, filter LFO on, gate percent.
++void nidhogg_state(int* s)
++{
++    s[0] = engine.getVoiceSlot();
++    s[1] = cManager.getTempo();
++    s[2] = seq.getPlaying();
++    s[3] = seq.getRecording();
++    s[4] = engine.getOctave();
++    s[5] = engine.getCycle();
++    s[6] = engine.getTable();
++    s[7] = engine.getPitchLfoOn();
++    s[8] = engine.getFilterLfoOn();
++    s[9] = int(seq.getGate() * 100.f + 0.5f);
++}
++#endif

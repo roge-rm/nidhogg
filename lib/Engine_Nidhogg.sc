@@ -1,6 +1,7 @@
 // Runs one Chompi firmware at a time between the norns inputs and outputs.
-// Command: start s:firmware ("tape"). The card folder is
-// ~/dust/audio/nidhogg/<firmware>.
+// Command: start s:firmware ("tape", "tempo" or "wave"). The card folder is
+// ~/dust/audio/nidhogg/<firmware>. A firmware that's stopped keeps its state
+// and carries on when started again.
 Engine_Nidhogg : CroneEngine {
     var synth;
 
@@ -11,6 +12,12 @@ Engine_Nidhogg : CroneEngine {
     alloc {
         SynthDef(\nidhogg_tape, { arg in_l, in_r, out;
             Out.ar(out, NidhoggTape.ar(In.ar(in_l), In.ar(in_r)));
+        }).add;
+        SynthDef(\nidhogg_tempo, { arg in_l, in_r, out;
+            Out.ar(out, NidhoggTempo.ar(In.ar(in_l), In.ar(in_r)));
+        }).add;
+        SynthDef(\nidhogg_wave, { arg in_l, in_r, out;
+            Out.ar(out, NidhoggWave.ar(In.ar(in_l), In.ar(in_r)));
         }).add;
 
         this.addCommand("start", "s", { arg msg;
