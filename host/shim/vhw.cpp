@@ -60,8 +60,9 @@ void (*pre_audio_)() = nullptr;
 // timers
 struct Timer
 {
-    uint32_t      period_us;
-    uint64_t      next;
+    const void*   id;
+    double        period_us;
+    double        next;
     TimerCallback cb;
     void*         data;
 };
@@ -129,12 +130,15 @@ void run_timers(uint64_t t)
             std::lock_guard<std::mutex> l(timers_m_);
             if(i >= timers_.size())
                 break;
-            if(timers_[i].next > t)
+            if(timers_[i].next > double(t))
                 continue;
-            timers_[i].next += timers_[i].period_us;
             tm = timers_[i];
+            // Fire every period that has come due, as the hardware would have.
+            while(timers_[i].next <= double(t))
+                timers_[i].next += timers_[i].period_us;
         }
-        tm.cb(tm.data);
+        for(double due = tm.next; due <= double(t); due += tm.period_us)
+            tm.cb(tm.data);
     }
 }
 
@@ -144,12 +148,12 @@ void timer_thread_main()
     sched_param sp{};
     sp.sched_priority = 60;
     pthread_setschedparam(pthread_self(), SCHED_FIFO, &sp);
-    uint64_t next = 1000;
+    uint64_t last = 0;
     while(!quit_)
     {
         {
             std::unique_lock<std::mutex> l(m_);
-            cv_.wait(l, [&] { return quit_ || vtime_ >= next; });
+            cv_.wait(l, [&] { return quit_ || vtime_ > last; });
         }
         if(quit_)
             break;
@@ -157,7 +161,7 @@ void timer_thread_main()
         irq_disable();
         run_timers(t);
         irq_enable();
-        next = (t / 1000 + 1) * 1000;
+        last = t;
     }
 }
 
@@ -282,11 +286,32 @@ bool audio_running()
 
 // ---- timers -----------------------------------------------------------------
 
-void add_timer(uint32_t hz, TimerCallback cb, void* data)
+void set_timer(const void* id, double hz, TimerCallback cb, void* data)
 {
     std::lock_guard<std::mutex> l(timers_m_);
-    uint32_t                    p = 1000000 / hz;
-    timers_.push_back({p, (vtime_ / p + 1) * p, cb, data});
+    double                      p = 1e6 / hz;
+    for(auto& tm : timers_)
+        if(tm.id == id)
+        {
+            // keep the phase: the next tick comes one new period after the last
+            tm.next      = tm.next - tm.period_us + p;
+            tm.period_us = p;
+            tm.cb        = cb;
+            tm.data      = data;
+            return;
+        }
+    timers_.push_back({id, p, double(vtime_) + p, cb, data});
+}
+
+void stop_timer(const void* id)
+{
+    std::lock_guard<std::mutex> l(timers_m_);
+    for(size_t i = 0; i < timers_.size(); i++)
+        if(timers_[i].id == id)
+        {
+            timers_.erase(timers_.begin() + long(i));
+            return;
+        }
 }
 
 void post_irq(TimerCallback cb, void* data)

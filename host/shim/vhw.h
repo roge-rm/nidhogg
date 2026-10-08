@@ -66,8 +66,11 @@ bool audio_running();
 // ---- timers -----------------------------------------------------------------
 
 using TimerCallback = void (*)(void* data);
-// Periodic callback in the timer context. Only 1 kHz is used by the firmware.
-void add_timer(uint32_t hz, TimerCallback cb, void* data);
+// Periodic callback in the timer context, `id` naming the timer. Calling it
+// again for the same id changes the rate. Timers fire at block boundaries
+// (every 0.5 ms), as many times as are due.
+void set_timer(const void* id, double hz, TimerCallback cb, void* data);
+void stop_timer(const void* id);
 // One-shot callback in the timer context on the next timer tick (DMA ends).
 void post_irq(TimerCallback cb, void* data);
 

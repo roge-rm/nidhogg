@@ -485,20 +485,36 @@ class TimerHandle::Impl
 {
   public:
     Config                cfg;
-    PeriodElapsedCallback cb   = nullptr;
-    void*                 data = nullptr;
+    uint32_t              prescaler = 0;
+    bool                  running   = false;
+    PeriodElapsedCallback cb        = nullptr;
+    void*                 data      = nullptr;
+
+    // Timers count at twice PCLK1 (240 MHz) through the prescaler and wrap
+    // after `period` + 1 counts (tim.cpp).
+    double Hz() const
+    {
+        return double(System::GetPClk1Freq()) * 2.0 / (prescaler + 1) / (double(cfg.period) + 1.0);
+    }
+    // Only interrupt-driven timers matter on the host; PWM timers do nothing.
+    void Update()
+    {
+        if(running && cfg.enable_irq && cb)
+            vhw::set_timer(this, Hz(), cb, data);
+    }
 };
 
 TimerHandle::Result TimerHandle::Init(const Config& config)
 {
     if(!pimpl_)
         pimpl_ = new Impl;
-    pimpl_->cfg = config;
+    pimpl_->cfg       = config;
+    pimpl_->prescaler = 0;
     return Result::OK;
 }
 TimerHandle::Result TimerHandle::DeInit()
 {
-    return Result::OK;
+    return Stop();
 }
 const TimerHandle::Config& TimerHandle::GetConfig() const
 {
@@ -507,30 +523,37 @@ const TimerHandle::Config& TimerHandle::GetConfig() const
 TimerHandle::Result TimerHandle::SetPeriod(uint32_t ticks)
 {
     pimpl_->cfg.period = ticks;
+    pimpl_->Update();
     return Result::OK;
 }
-TimerHandle::Result TimerHandle::SetPrescaler(uint32_t)
+TimerHandle::Result TimerHandle::SetPrescaler(uint32_t val)
 {
+    pimpl_->prescaler = val;
+    pimpl_->Update();
     return Result::OK;
 }
 TimerHandle::Result TimerHandle::Start()
 {
-    // Only interrupt-driven timers matter on the host; PWM timers do nothing.
-    if(pimpl_->cfg.enable_irq && pimpl_->cb && pimpl_->cfg.period)
-        vhw::add_timer(System::GetPClk2Freq() / pimpl_->cfg.period, pimpl_->cb, pimpl_->data);
+    pimpl_->running = true;
+    pimpl_->Update();
     return Result::OK;
 }
 TimerHandle::Result TimerHandle::Stop()
 {
+    if(pimpl_)
+    {
+        pimpl_->running = false;
+        vhw::stop_timer(pimpl_);
+    }
     return Result::OK;
 }
 uint32_t TimerHandle::GetFreq()
 {
-    return System::GetPClk2Freq();
+    return System::GetPClk1Freq() * 2 / (pimpl_->prescaler + 1);
 }
 uint32_t TimerHandle::GetTick()
 {
-    return uint32_t(vhw::now_us() * (System::GetPClk2Freq() / 1000000));
+    return uint32_t(vhw::now_us() * (GetFreq() / 1e6));
 }
 uint32_t TimerHandle::GetMs()
 {
@@ -555,6 +578,7 @@ void TimerHandle::SetCallback(PeriodElapsedCallback cb, void* data)
         pimpl_ = new Impl;
     pimpl_->cb   = cb;
     pimpl_->data = data;
+    pimpl_->Update();
 }
 
 // LED PWM channels: a DMA transfer ends about a millisecond later, in

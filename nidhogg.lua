@@ -20,6 +20,7 @@ local install = include("lib/install")
 local omx = include("lib/omx")
 local view = include("lib/view")
 local saver = include("lib/saver")
+local options = include("lib/options")
 
 local OSC_PORT = 57140 -- TAPE
 local SW = {PLAY = 33, LOOP = 34}
@@ -51,7 +52,7 @@ local BANK_COLORS = {
 local PINK = {255, 92, 158}
 
 
-local needs_restart = false
+local running = false -- true once the firmware is going
 local load_avg, load_max = 0, 0
 
 -- Firmware state from the bridge, plus what the screens need to know here.
@@ -150,18 +151,47 @@ end
 
 local SAVER_TIMES = {60, 180, 600, math.huge}
 
-function init()
+-- MIDI: Chompi's MIDI out goes to a norns MIDI device, and notes and CCs from
+-- another device go to Chompi as if from its USB port.
+local midi_out_dev, midi_in_dev
+
+local function midi_devices()
+  local names = {"none"}
+  for i = 1, #midi.vports do names[#names + 1] = midi.vports[i].name end
+  return names
+end
+
+local function add_params()
+  params:add_separator("nidhogg", "nidhogg")
   params:add_option("saver", "screensaver after", {"1 min", "3 min", "10 min", "off"}, 2)
   params:set_action("saver", function(i) saver.delay = SAVER_TIMES[i] end)
-  params:bang()
 
-  needs_restart = install.plugins()
-  if needs_restart then
-    redraw()
-    return
-  end
+  local devs = midi_devices()
+  params:add_option("midi_out", "midi out to", devs, 1)
+  params:set_action("midi_out", function(i)
+    midi_out_dev = i > 1 and midi.connect(i - 1) or nil
+  end)
+  params:add_option("midi_in", "midi in from", devs, 1)
+  params:set_action("midi_in", function(i)
+    if midi_in_dev then midi_in_dev.event = nil end
+    midi_in_dev = i > 1 and midi.connect(i - 1) or nil
+    if midi_in_dev then
+      midi_in_dev.event = function(data)
+        local msg = {"usb"}
+        for _, b in ipairs(data) do msg[#msg + 1] = b end
+        send("/midi", msg)
+      end
+    end
+  end)
+
+  options.add_params(install.card_dir("tape"))
+end
+
+-- Runs the firmware once everything is in place.
+local function start()
   engine.start("tape")
   start_omx()
+  running = true
   -- a reloaded script has none of the firmware's state yet
   clock.run(function()
     clock.sleep(0.5)
@@ -198,6 +228,46 @@ function init()
   end)
 end
 
+-- Plugins next: a new or changed one needs SuperCollider restarted, as does
+-- a first install, where SuperCollider hasn't seen the engine yet.
+local function install_plugins()
+  local changed = install.plugins()
+  if changed or not tab.contains(engine.names or {}, "Nidhogg") then
+    install.status = "restarting norns to load nidhogg"
+    redraw()
+    clock.run(function()
+      clock.sleep(2)
+      install.restart()
+    end)
+    return
+  end
+  start()
+end
+
+function init()
+  add_params()
+  saver.delay = SAVER_TIMES[params:get("saver")]
+
+  clock.run(function()
+    while not running do
+      redraw()
+      clock.sleep(0.25)
+    end
+  end)
+
+  if not install.have_cards() then
+    install.fetch_cards(function(ok)
+      if ok then
+        install_plugins()
+      else
+        install.status = "couldn't download the samples. check wifi, then reload nidhogg."
+      end
+    end)
+  else
+    install_plugins()
+  end
+end
+
 function cleanup()
   omx.disconnect()
 end
@@ -220,6 +290,14 @@ function osc.event(path, args, from)
     s.looper, s.sample_rec = args[9], args[10] == 1
   elseif path == "/looper" then
     s.looper_pos, s.dub = args[1], args[2]
+  elseif path == "/midi" then
+    -- Chompi sends the same to its TRS and USB ports; pass one stream on.
+    if args[1] == "usb" and midi_out_dev then
+      local bytes = args[2]
+      local data = {}
+      for k = 1, #bytes do data[k] = bytes:byte(k) end
+      midi_out_dev:send(data)
+    end
   elseif path == "/load" then
     load_avg, load_max = args[1], args[2]
   end
@@ -254,12 +332,20 @@ function redraw()
   screen.clear()
   screen.font_face(1)
   screen.font_size(8)
-  if needs_restart then
+  if not running then
     screen.level(15)
-    screen.move(64, 28)
-    screen.text_center("nidhogg installed its engine.")
+    screen.move(64, 24)
+    screen.text_center("nidhogg")
+    screen.level(6)
+    local msg = install.status or "starting"
+    -- wrap long messages over two lines
+    local cut = #msg > 30 and (msg:sub(1, 30):match(".*() ") or 30) or nil
     screen.move(64, 40)
-    screen.text_center("restart norns to use it.")
+    screen.text_center(cut and msg:sub(1, cut - 1) or msg)
+    if cut then
+      screen.move(64, 50)
+      screen.text_center(msg:sub(cut + 1))
+    end
     screen.update()
     return
   end
