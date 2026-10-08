@@ -1,0 +1,302 @@
+<title>Playing nidhogg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=Chivo+Mono:wght@400;600&family=Silkscreen&display=swap">
+<style>
+/* Layout: one reading column; each section pairs a short text with a drawing of the hardware or the OLED. Colours match the nidhogg controls page. */
+:root {
+  --bg: #eef0f1;
+  --panel: #fbfbfa;
+  --edge: #8d969c;
+  --cap: #c9cdd0;
+  --cap-ink: #2a2f33;
+  --fg: #1f2427;
+  --muted: #5f686e;
+  --note: #d9e6f2;
+  --func: #f3dcc4;
+  --chompi: #e3d3f0;
+  --knob: #d6ecd9;
+  --hot: #ffcf3a;
+  --oled-bg: #05080a;
+  --oled-ink: #9fe3ff;
+  --accent: #7a3fb0;
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Chivo Mono", ui-monospace, Menlo, monospace;
+  --pixel: "Silkscreen", "Chivo Mono", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15191b; --panel: #1f2427; --edge: #6c767c; --cap: #3a4146; --cap-ink: #e8ecee;
+  --fg: #e6eaec; --muted: #9aa4aa; --note: #24394d; --func: #4a3420; --chompi: #3a2a4d;
+  --knob: #22402a; --hot: #c99a12; --accent: #c49af0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15191b; --panel: #1f2427; --edge: #6c767c; --cap: #3a4146; --cap-ink: #e8ecee;
+  --fg: #e6eaec; --muted: #9aa4aa; --note: #24394d; --func: #4a3420; --chompi: #3a2a4d;
+  --knob: #22402a; --hot: #c99a12; --accent: #c49af0; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font: 16px/1.55 var(--display); }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 40px; }
+header { display: grid; gap: 8px; }
+h1 { font-size: 34px; line-height: 1.1; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 22px; margin: 0; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p, li { max-width: 66ch; }
+p { margin: 0; }
+.lede { color: var(--muted); }
+section { display: grid; gap: 14px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 720px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.scroll { overflow-x: auto; }
+svg { display: block; }
+svg text { font-family: var(--mono); fill: var(--cap-ink); }
+svg .lbl { fill: var(--fg); font-size: 12px; }
+svg .sub { fill: var(--muted); font-size: 10.5px; }
+svg .hw { fill: var(--muted); font-size: 10px; letter-spacing: 0.06em; }
+ul, ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+kbd { font: 600 12px var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--edge); background: var(--panel); white-space: nowrap; }
+.k-chompi { background: var(--chompi); } .k-knob { background: var(--knob); } .k-func { background: var(--func); } .k-note { background: var(--note); }
+
+/* OLED mock-ups: 128x32 drawn at 3x */
+.oled { background: var(--oled-bg); color: var(--oled-ink); font: 12px/1 var(--pixel); width: 384px; max-width: 100%; aspect-ratio: 4 / 1; border-radius: 4px; border: 6px solid #22282c; box-sizing: content-box; position: relative; overflow: hidden; }
+.oled .row { position: absolute; left: 6px; right: 6px; display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; }
+.oled .bar { position: absolute; left: 6px; right: 6px; height: 20px; border: 2px solid var(--oled-ink); box-sizing: border-box; }
+.oled .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--oled-ink); }
+.oled .chip { padding: 0 3px; }
+.oled .chip.on { background: var(--oled-ink); color: var(--oled-bg); }
+.oled-cap { font: 12px var(--mono); color: var(--muted); margin-top: 6px; }
+.oled-fig { display: grid; gap: 4px; }
+
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; counter-reset: s; }
+.step { background: var(--panel); border: 1px solid var(--cap); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
+.step b { font: 600 12px var(--mono); color: var(--accent); letter-spacing: 0.06em; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--cap); vertical-align: top; }
+th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 13px var(--mono); }
+.flow .st { padding: 6px 10px; border-radius: 999px; border: 1.5px solid var(--edge); background: var(--panel); }
+.flow .st.rec { border-color: #d0453c; }
+.flow .ar { color: var(--muted); font-size: 12px; }
+.note { font-size: 14px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Playing nidhogg</h1>
+    <p class="lede">nidhogg runs Chompi's own TAPE firmware on norns, with an OMX-27 as the panel. TAPE is a sampler and a tape looper: play samples across the keys, record your own, and loop it all on a varispeed tape with delay and reverb. This covers the test build: TAPE only.</p>
+  </header>
+
+  <section>
+    <h2>Where everything is</h2>
+    <div class="scroll">
+      <svg viewBox="0 0 1000 330" width="1000" height="330" role="img" aria-label="OMX-27 with Chompi's controls marked on each key, pot and the encoder">
+        <rect x="4" y="4" width="992" height="322" rx="10" fill="var(--panel)" stroke="var(--edge)"/>
+        <rect x="20" y="40" width="64" height="64" rx="8" fill="var(--chompi)" stroke="var(--edge)"/>
+        <text x="52" y="70" text-anchor="middle" font-size="12" font-weight="600">CHOMPI</text>
+        <text x="52" y="86" text-anchor="middle" font-size="9.5">hold: shift</text>
+        <text x="52" y="30" text-anchor="middle" class="hw">AUX</text>
+        <g>
+          <circle cx="215" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/><text x="215" y="56" text-anchor="middle" class="lbl">Pitch</text><text x="215" y="70" text-anchor="middle" class="sub">gain</text>
+          <circle cx="305" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/><text x="305" y="56" text-anchor="middle" class="lbl">Start</text><text x="305" y="70" text-anchor="middle" class="sub">attack</text>
+          <circle cx="400" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/><text x="400" y="56" text-anchor="middle" class="lbl">End</text><text x="400" y="70" text-anchor="middle" class="sub">release</text>
+          <circle cx="490" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/><text x="490" y="56" text-anchor="middle" class="lbl">Magic</text><text x="490" y="70" text-anchor="middle" class="sub">verb+dly</text><text x="490" y="82" text-anchor="middle" class="sub">lo-fi · filter</text>
+          <rect x="525" y="90" width="112" height="30" rx="2" fill="var(--oled-bg)" stroke="var(--edge)"/><text x="581" y="109" text-anchor="middle" font-size="10" style="fill:var(--oled-ink)">what's changing</text>
+          <polygon points="693,104 699,92 711,92 717,104 711,116 699,116" fill="var(--chompi)" stroke="var(--edge)"/><text x="705" y="56" text-anchor="middle" class="lbl">Transport</text><text x="705" y="70" text-anchor="middle" class="sub">push: 1x</text>
+          <circle cx="780" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/><text x="780" y="56" text-anchor="middle" class="lbl">Volume</text><text x="780" y="70" text-anchor="middle" class="sub">input gain</text>
+          <text x="352" y="140" text-anchor="middle" class="sub">second line is each knob's next page</text>
+        </g>
+        <g font-size="11">
+          <g transform="translate(110,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">C#</text></g>
+          <g transform="translate(170,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">D#</text></g>
+          <g transform="translate(290,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">F#</text></g>
+          <g transform="translate(350,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">G#</text></g>
+          <g transform="translate(410,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">A#</text></g>
+          <g transform="translate(530,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">C#</text></g>
+          <g transform="translate(590,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">D#</text></g>
+          <g transform="translate(710,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">F#</text></g>
+          <g transform="translate(770,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">G#</text></g>
+          <g transform="translate(830,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="24" text-anchor="middle" font-weight="600">A#</text></g>
+          <text x="500" y="200" text-anchor="middle" class="sub">black keys play notes; with AUX held they're the shift menu</text>
+        </g>
+        <g font-size="11">
+          <g transform="translate(20,222)"><rect width="54" height="80" rx="6" fill="var(--cap)" stroke="var(--edge)"/><text x="27" y="44" text-anchor="middle" font-size="10">unused</text></g>
+          <g transform="translate(80,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">C</text><text x="27" y="62" text-anchor="middle" font-size="10">1</text></g>
+          <g transform="translate(140,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">D</text><text x="27" y="62" text-anchor="middle" font-size="10">2</text></g>
+          <g transform="translate(200,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">E</text><text x="27" y="62" text-anchor="middle" font-size="10">3</text></g>
+          <g transform="translate(260,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">F</text><text x="27" y="62" text-anchor="middle" font-size="10">4</text></g>
+          <g transform="translate(320,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">G</text><text x="27" y="62" text-anchor="middle" font-size="10">5</text></g>
+          <g transform="translate(380,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">A</text><text x="27" y="62" text-anchor="middle" font-size="10">6</text></g>
+          <g transform="translate(440,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">B</text><text x="27" y="62" text-anchor="middle" font-size="10">7</text></g>
+          <g transform="translate(500,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--accent)" stroke-width="2"/><text x="27" y="30" text-anchor="middle" font-weight="600">C</text><text x="27" y="50" text-anchor="middle" font-size="9">original</text><text x="27" y="62" text-anchor="middle" font-size="9">pitch</text><text x="27" y="74" text-anchor="middle" font-size="10">8</text></g>
+          <g transform="translate(560,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">D</text><text x="27" y="62" text-anchor="middle" font-size="10">9</text></g>
+          <g transform="translate(620,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">E</text><text x="27" y="62" text-anchor="middle" font-size="10">10</text></g>
+          <g transform="translate(680,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">F</text><text x="27" y="62" text-anchor="middle" font-size="10">11</text></g>
+          <g transform="translate(740,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">G</text><text x="27" y="62" text-anchor="middle" font-size="10">12</text></g>
+          <g transform="translate(800,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">A</text><text x="27" y="62" text-anchor="middle" font-size="10">13</text></g>
+          <g transform="translate(860,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">B</text><text x="27" y="62" text-anchor="middle" font-size="10">14</text></g>
+          <g transform="translate(920,222)"><rect width="54" height="80" rx="6" fill="var(--chompi)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">C</text><text x="27" y="56" text-anchor="middle" font-size="10">15</text><text x="27" y="69" text-anchor="middle" font-size="9">RAM</text></g>
+        </g>
+      </svg>
+    </div>
+    <div class="cols">
+      <div class="scroll">
+        <svg viewBox="0 0 420 250" width="420" height="250" role="img" aria-label="ShieldXL norns: K1 and E1 top left, screen lower left, E2 and E3 right with K2 and K3 below">
+          <rect x="4" y="4" width="412" height="242" rx="10" fill="var(--panel)" stroke="var(--edge)"/>
+          <rect x="18" y="18" width="40" height="40" rx="6" fill="var(--cap)" stroke="var(--edge)"/><text x="38" y="36" text-anchor="middle" font-size="11" font-weight="600">K1</text><text x="38" y="50" text-anchor="middle" font-size="8.5">hold</text>
+          <circle cx="86" cy="38" r="17" fill="var(--chompi)" stroke="var(--edge)"/><text x="86" y="42" text-anchor="middle" font-size="11" font-weight="600">E1</text>
+          <text x="112" y="34" class="lbl">E1: Play / Record</text><text x="112" y="48" class="sub">left Play · right Record</text>
+          <rect x="18" y="86" width="210" height="140" rx="3" fill="var(--oled-bg)" stroke="var(--edge)"/>
+          <text x="123" y="122" text-anchor="middle" font-size="10" style="fill:var(--oled-ink)">top half: same as OMX screen</text>
+          <line x1="22" y1="156" x2="224" y2="156" stroke="var(--edge)" stroke-dasharray="3 3"/>
+          <text x="123" y="192" text-anchor="middle" font-size="10" style="fill:var(--oled-ink)">bottom: Chompi's lights</text>
+          <circle cx="292" cy="110" r="17" fill="var(--chompi)" stroke="var(--edge)"/><text x="292" y="114" text-anchor="middle" font-size="11" font-weight="600">E2</text><text x="292" y="146" text-anchor="middle" class="sub">transport</text>
+          <circle cx="372" cy="110" r="17" fill="var(--knob)" stroke="var(--edge)"/><text x="372" y="114" text-anchor="middle" font-size="11" font-weight="600">E3</text><text x="372" y="146" text-anchor="middle" class="sub">volume</text>
+          <rect x="266" y="172" width="52" height="52" rx="6" fill="var(--chompi)" stroke="var(--edge)"/><text x="292" y="194" text-anchor="middle" font-size="11" font-weight="600">K2</text><text x="292" y="210" text-anchor="middle" font-size="9.5">PLAY</text>
+          <rect x="346" y="172" width="52" height="52" rx="6" fill="var(--chompi)" stroke="var(--edge)"/><text x="372" y="194" text-anchor="middle" font-size="11" font-weight="600">K3</text><text x="372" y="210" text-anchor="middle" font-size="9.5">LOOP</text>
+        </svg>
+      </div>
+      <div style="display:grid;gap:10px">
+        <p><kbd class="k-chompi">E1</kbd> is Chompi's Play/Record switch. In Play, <kbd class="k-chompi">AUX</kbd> is shift. In Record, it records.</p>
+        <p><kbd class="k-chompi">K2</kbd> and <kbd class="k-chompi">K3</kbd> run the looper.</p>
+        <p><kbd>K1</kbd> held while you nudge a pot <b>pushes</b> that knob, which steps it to its next page.</p>
+        <p class="note">Every OMX key lights up with the colour Chompi's own key would show.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Knobs and pages</h2>
+    <div class="cols">
+      <div style="display:grid;gap:10px">
+        <p>Each knob has two or three jobs, called pages. Hold <kbd>K1</kbd> and nudge the pot to step to the next page. The screen shows which page you're on as dots.</p>
+        <p>A pot does nothing until you sweep it past the knob's current setting, then it takes over. Until then the screen shows a small triangle where the pot is, and which way to sweep.</p>
+      </div>
+      <div class="oled-fig">
+        <div class="oled" aria-label="OMX screen showing Magic on its filter page, the pot not yet picked up">
+          <div class="row" style="top:6px"><span>MAGIC</span><span>high 30</span></div>
+          <div class="bar" style="top:30px"><div class="fill" style="width:65%"></div><div style="position:absolute;left:calc(50% - 1px);top:0;bottom:0;width:3px;background:var(--oled-bg)"></div></div>
+          <div style="position:absolute;top:56px;left:calc(6px + 22%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:10px solid var(--oled-ink)"></div>
+          <div class="row" style="top:80px"><span>● ● ●&nbsp; filter</span><span>sweep &gt;</span></div>
+        </div>
+        <div class="oled-cap">Magic on page 3, the filter. The pot (triangle) is left of the setting, so sweep right to pick it up.</div>
+      </div>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Knob</th><th>Page 1</th><th>Page 2</th><th>Page 3</th></tr></thead>
+        <tbody>
+          <tr><td><kbd class="k-knob">Pitch</kbd></td><td>speed and direction. Right of middle plays forward, left backwards, middle almost stops. About 5/6 up is normal speed.</td><td>sample gain</td><td></td></tr>
+          <tr><td><kbd class="k-knob">Start</kbd></td><td>where in the sample playback starts</td><td>attack</td><td></td></tr>
+          <tr><td><kbd class="k-knob">End</kbd></td><td>where it ends</td><td>release</td><td></td></tr>
+          <tr><td><kbd class="k-knob">Magic</kbd></td><td>reverb and delay together</td><td>lo-fi saturation</td><td>filter. Middle is off, left low-pass, right high-pass</td></tr>
+          <tr><td><kbd class="k-knob">Volume</kbd></td><td>main volume</td><td>input gain</td><td></td></tr>
+          <tr><td><kbd class="k-chompi">Transport</kbd></td><td>the looper's speed, -2x to 2x. Push the encoder for 1x.</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Playing samples</h2>
+    <div class="cols">
+      <div style="display:grid;gap:10px">
+        <p><b>JAMMI</b> mode plays one sample across all the keys. White key 8 plays it at its own pitch. Up to 7 notes sound at once.</p>
+        <p><b>CUBBI</b> mode gives each white key its own sample at its own pitch, each with its own knob settings.</p>
+        <p>To pick a sample in JAMMI, hold <kbd class="k-chompi">AUX</kbd> and press a white key. Keys 1-14 are the card's slots in the current bank; key 15 is the RAM slot, where your own recordings go. Slots that have a sample light up in the bank's colour while you hold AUX.</p>
+        <p class="note">After start-up you're in JAMMI on slot 15. Until you record something it plays a built-in test tone.</p>
+      </div>
+      <div class="oled-fig">
+        <div class="oled" aria-label="OMX screen at rest">
+          <div class="row" style="top:6px"><span>JAMMI A3</span><span class="chip">PLAY</span></div>
+          <div class="row" style="top:36px"><span>IN LINE</span><span>LOOPER &gt; FX</span></div>
+          <div class="row" style="top:72px"><span>PLAYING</span><span></span></div>
+          <div class="bar" style="top:68px;left:170px;height:18px"><div class="fill" style="width:40%"></div></div>
+        </div>
+        <div class="oled-cap">At rest: mode, bank and slot, the Play/Record switch, input, FX order and the looper.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The shift menu</h2>
+    <p>Hold <kbd class="k-chompi">AUX</kbd> and the black keys and pots change jobs. Let go to go back.</p>
+    <div class="scroll">
+      <svg viewBox="0 0 860 120" width="860" height="120" role="img" aria-label="The ten black keys and their shift jobs">
+        <g font-size="11">
+          <g transform="translate(10,10)"><rect width="74" height="70" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="37" y="22" text-anchor="middle" font-weight="600">JAMMI</text><text x="37" y="40" text-anchor="middle" font-size="9.5">again: next</text><text x="37" y="53" text-anchor="middle" font-size="9.5">bank</text></g>
+          <g transform="translate(90,10)"><rect width="74" height="70" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="37" y="22" text-anchor="middle" font-weight="600">CUBBI</text><text x="37" y="40" text-anchor="middle" font-size="9.5">again: next</text><text x="37" y="53" text-anchor="middle" font-size="9.5">bank</text></g>
+          <g transform="translate(190,10)"><rect width="74" height="70" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="37" y="22" text-anchor="middle" font-weight="600">mic</text><text x="37" y="40" text-anchor="middle" font-size="9.5">norns</text><text x="37" y="53" text-anchor="middle" font-size="9.5">left input</text></g>
+          <g transform="translate(270,10)"><rect width="74" height="70" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="37" y="22" text-anchor="middle" font-weight="600">line</text><text x="37" y="40" text-anchor="middle" font-size="9.5">both</text><text x="37" y="53" text-anchor="middle" font-size="9.5">inputs</text></g>
+          <g transform="translate(350,10)"><rect width="74" height="70" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="37" y="22" text-anchor="middle" font-weight="600">resample</text><text x="37" y="40" text-anchor="middle" font-size="9.5">record</text><text x="37" y="53" text-anchor="middle" font-size="9.5">itself</text></g>
+          <g transform="translate(450,10)"><rect width="74" height="70" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="37" y="22" text-anchor="middle" font-weight="600">FX pre</text><text x="37" y="40" text-anchor="middle" font-size="9.5">before</text><text x="37" y="53" text-anchor="middle" font-size="9.5">the looper</text></g>
+          <g transform="translate(530,10)"><rect width="74" height="70" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="37" y="22" text-anchor="middle" font-weight="600">FX post</text><text x="37" y="40" text-anchor="middle" font-size="9.5">after</text><text x="37" y="53" text-anchor="middle" font-size="9.5">the looper</text></g>
+          <g transform="translate(630,10)"><rect width="70" height="70" rx="6" fill="var(--func)" stroke="#d0453c" stroke-width="2"/><text x="35" y="22" text-anchor="middle" font-weight="600">erase</text></g>
+          <g transform="translate(706,10)"><rect width="70" height="70" rx="6" fill="var(--func)" stroke="#3a9a4a" stroke-width="2"/><text x="35" y="22" text-anchor="middle" font-weight="600">copy</text></g>
+          <g transform="translate(782,10)"><rect width="70" height="70" rx="6" fill="var(--func)" stroke="#3a6ad0" stroke-width="2"/><text x="35" y="22" text-anchor="middle" font-weight="600">save</text></g>
+          <text x="87" y="104" text-anchor="middle" class="sub">mode and bank</text>
+          <text x="307" y="104" text-anchor="middle" class="sub">what CHOMPI records</text>
+          <text x="527" y="104" text-anchor="middle" class="sub">FX order</text>
+          <text x="741" y="104" text-anchor="middle" class="sub">files on the card</text>
+        </g>
+      </svg>
+    </div>
+    <div class="cols">
+      <div style="display:grid;gap:8px">
+        <h3>Pots and pushes while AUX is held</h3>
+        <ul>
+          <li><kbd class="k-knob">Pitch</kbd> tunes in fifths and fourths. Page 2 is pan.</li>
+          <li><kbd class="k-knob">Start</kbd> and <kbd class="k-knob">End</kbd> slide the whole start-to-end window. Page 2 sets attack and release together.</li>
+          <li><kbd class="k-knob">Magic</kbd> sets the delay time (and reverb length), then warble, then filter resonance.</li>
+          <li><kbd class="k-knob">Volume</kbd> sets the output compressor.</li>
+          <li>Push Start: auto-loop on or off. Push End: sustain on or off. Push Magic: reset all FX. Push Volume: where the input is heard.</li>
+          <li><kbd class="k-chompi">K2</kbd> / <kbd class="k-chompi">K3</kbd>: overdub level down or up.</li>
+        </ul>
+      </div>
+      <div class="oled-fig">
+        <div class="oled" aria-label="OMX screen with shift held">
+          <div class="row" style="top:4px"><span>SHIFT</span><span>JAMMI A</span></div>
+          <div class="row" style="top:30px;justify-content:space-between"><span class="chip on">JAMMI</span><span class="chip">CUBBI</span><span class="chip">MIC</span><span class="chip on">LINE</span><span class="chip">RSMP</span></div>
+          <div class="row" style="top:56px"><span class="chip">PRE</span><span class="chip on">POST</span><span class="chip">ERASE</span><span class="chip">COPY</span><span class="chip">SAVE</span></div>
+          <div class="row" style="top:82px"><span>TUNE</span><span>MOVE</span><span>MOVE</span><span>TIME</span><span>COMP</span></div>
+        </div>
+        <div class="oled-cap">Shift held: current choices are filled in. The bottom row is what each pot does.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Recording a sample</h2>
+    <div class="steps">
+      <div class="step"><b>1</b><p>Turn <kbd class="k-chompi">E1</kbd> right for <b>Record</b>. You now hear the input.</p></div>
+      <div class="step"><b>2</b><p>Hold <kbd class="k-chompi">AUX</kbd> while you make the sound. Let go to stop. The screen shows SAMPLING.</p></div>
+      <div class="step"><b>3</b><p>Turn <kbd class="k-chompi">E1</kbd> left for <b>Play</b> and play it on the keys. It's in slot 15.</p></div>
+      <div class="step"><b>Keep it</b><p>Hold AUX, press <kbd class="k-func">save</kbd>, press a white key 1-14 for where it goes, then press AUX to confirm. Copy and erase work the same way.</p></div>
+    </div>
+    <p class="note">The input is whatever the shift menu has chosen: mic (norns left input), line (both inputs) or resample (nidhogg itself).</p>
+  </section>
+
+  <section>
+    <h2>The looper</h2>
+    <div class="flow" aria-label="Looper states">
+      <span class="st">empty</span><span class="ar">LOOP →</span>
+      <span class="st rec">recording</span><span class="ar">LOOP →</span>
+      <span class="st rec">overdub</span><span class="ar">LOOP →</span>
+      <span class="st">playing</span><span class="ar">PLAY ⇄</span>
+      <span class="st">paused</span>
+    </div>
+    <ul>
+      <li><kbd class="k-chompi">LOOP</kbd> starts the first recording. Press again to close the loop, and it carries straight on overdubbing. Press again to stop overdubbing, and again to start a new layer.</li>
+      <li><kbd class="k-chompi">PLAY</kbd> stops and starts the tape, with a little tape-stop slowdown. Hold it 2 seconds while paused to rewind.</li>
+      <li><kbd class="k-chompi">PLAY</kbd> + <kbd class="k-chompi">LOOP</kbd> on an empty looper: recording starts with your next note.</li>
+      <li>Hold <kbd class="k-chompi">PLAY</kbd> + <kbd class="k-chompi">LOOP</kbd> for 2 seconds to clear the loop.</li>
+      <li><kbd class="k-chompi">Transport</kbd> (OMX encoder or E2) sets the tape speed from -2x to 2x while playing. While paused, turning it scrubs the tape. Push the OMX encoder for normal speed.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Not in this build yet</h2>
+    <ul>
+      <li>TEMPO and WAVE.</li>
+      <li>norns settings (Chompi's options), and Chompi's MIDI out to your MIDI devices.</li>
+    </ul>
+  </section>
+</div>
