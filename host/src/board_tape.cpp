@@ -300,6 +300,7 @@ int   nidhogg_looper_state();
 float nidhogg_looper_position();
 float nidhogg_dub_level();
 bool  nidhogg_sample_recording();
+bool  nidhogg_ready();
 
 namespace
 {
@@ -428,6 +429,9 @@ void pot(int knob, float value)
 Status status()
 {
     Status st{};
+    st.ready = nidhogg_ready();
+    if(!st.ready)
+        return st;
     for(int k = 0; k < 6; k++)
     {
         st.knob_page[k]  = nidhogg_knob_page(k);

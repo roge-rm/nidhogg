@@ -16,7 +16,7 @@
          daisy::UI ui;
 --- a/chompi_main.cpp
 +++ b/chompi_main.cpp
-@@ -418,4 +418,39 @@
+@@ -418,4 +418,41 @@
      {
          MainLoop(nullptr);
      }
@@ -34,6 +34,8 @@
 +
 +// Engine state for nidhogg's screens; read outside the audio context, so a
 +// value can be a block old.
++// Only valid once the boot is done: the engine and looper are set up before.
++bool nidhogg_ready() { return !booting; }
 +int nidhogg_voice_mode() { return int(engine.GetVoiceMode()); }
 +int nidhogg_bank() { return engine.GetBank(); }
 +int nidhogg_voice_bank() { return int(engine.GetVoiceBank()); }

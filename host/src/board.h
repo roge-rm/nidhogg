@@ -28,6 +28,7 @@ Leds leds();
 // Firmware state for the norns and OMX-27 screens.
 struct Status
 {
+    bool  ready; // false until the firmware has booted; nothing else is valid
     int   knob_page[6];
     float knob_value[6];
     bool  pot_picked[6]; // the pot has taken over its knob

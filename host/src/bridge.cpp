@@ -94,6 +94,8 @@ int on_quit(const char*, const char*, lo_arg**, int, lo_message, void*)
 void send_status(board::Status& last, bool& first)
 {
     board::Status st = board::status();
+    if(!st.ready)
+        return;
     for(int k = 0; k < 6; k++)
     {
         if(first || st.knob_page[k] != last.knob_page[k]
