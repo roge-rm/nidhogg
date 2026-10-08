@@ -16,6 +16,12 @@ endif()
 
 set(CHOMPI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/chompi)
 find_package(Threads REQUIRED)
+# The real-time runner needs JACK and liblo; without them only the offline
+# harness is built.
+find_path(JACK_INC jack/jack.h)
+find_library(JACK_LIB jack)
+find_path(LO_INC lo/lo.h)
+find_library(LO_LIB lo)
 
 # Chompi builds at -O3, gnu++14 and gnu11, without exceptions or RTTI.
 # The STM32 HAL names hardware.h uses come in through the HAL shim.
@@ -94,6 +100,13 @@ function(nidhogg_firmware fw)
     add_executable(nidhogg-${fw}-render src/render.cpp)
     target_compile_options(nidhogg-${fw}-render PRIVATE -O2 -Wall)
     target_link_libraries(nidhogg-${fw}-render ${lib})
+
+    if(JACK_INC AND JACK_LIB AND LO_INC AND LO_LIB)
+        add_executable(nidhogg-${fw} src/run.cpp)
+        target_compile_options(nidhogg-${fw} PRIVATE -O2 -Wall)
+        target_include_directories(nidhogg-${fw} PRIVATE ${JACK_INC} ${LO_INC})
+        target_link_libraries(nidhogg-${fw} ${lib} ${JACK_LIB} ${LO_LIB})
+    endif()
 endfunction()
 
 nidhogg_firmware(tape
