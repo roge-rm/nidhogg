@@ -1,6 +1,12 @@
 --- a/chompi_main.cpp
 +++ b/chompi_main.cpp
-@@ -27,8 +27,14 @@
+@@ -1,4 +1,5 @@
+ #include "hardware.h"
++#include <cstring>
+ #include "temp_led_stuff.h"
+ #include "ui.h"
+ #include "daisysp.h"
+@@ -27,8 +28,14 @@
  Hardware hw;
  UserInterface ui;
  
@@ -15,7 +21,7 @@
  
  SdmmcHandler sdmmc;
  FatFSInterface fsi;
-@@ -45,7 +51,11 @@
+@@ -45,7 +52,11 @@
  granularDelay delay;
  StateSaver stateSaver;
  BaseEngine* engines[2] = { &sEngine, &slice };
@@ -27,7 +33,7 @@
  TimerHandle midi_clock_timer;
  
  size_t tim_base_freq;
-@@ -63,7 +73,14 @@
+@@ -63,7 +74,14 @@
  bool testLoad; //To make sure wavetables don't get loaded until later
  bool testSDLoaded;
  
@@ -42,11 +48,17 @@
  
  daisysp::Oscillator osc;
  
-@@ -204,11 +221,13 @@
+@@ -204,11 +222,19 @@
  
  void ZeroSDRAM()
  {
-+#ifndef NIDHOGG_HOST
++#ifdef NIDHOGG_HOST
++    // Zeroing the big buffers also maps their memory now, at boot, so audio
++    // never waits on the first touch of a page.
++    std::memset(granularBuffer, 0, sizeof(granularBuffer));
++    std::memset(frozenBuffer, 0, sizeof(frozenBuffer));
++    std::memset(host_sdram, 0, sizeof(host_sdram));
++#else
      uint32_t *beg, *end;
      size_t    size_in_words = (1024 * 1024 * 64) / sizeof(uint32_t);
      beg                     = (uint32_t*)0xc0000000;

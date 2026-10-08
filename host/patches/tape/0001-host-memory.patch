@@ -1,6 +1,12 @@
 --- a/chompi_main.cpp
 +++ b/chompi_main.cpp
-@@ -11,6 +11,13 @@
+@@ -1,4 +1,5 @@
+ #include "hardware.h"
++#include <cstring>
+ #include "temp_led_stuff.h"
+ #include "ui.h"
+ #include "daisysp.h"
+@@ -11,6 +12,13 @@
  #include "OptionsManager.h"
  
  #define DSY_DTCMRAM_BSS __attribute__((section(".dtcmram_bss")))
@@ -14,11 +20,17 @@
  
  using namespace daisy;
  using namespace chompi;
-@@ -104,11 +111,13 @@
+@@ -104,11 +112,19 @@
  
  void ZeroSDRAM()
  {
-+#ifndef NIDHOGG_HOST
++#ifdef NIDHOGG_HOST
++    // Zeroing the big buffers also maps their memory now, at boot, so audio
++    // never waits on the first touch of a page.
++    std::memset(del_mem, 0, sizeof(del_mem));
++    std::memset(loop_mem, 0, sizeof(loop_mem));
++    std::memset(chompi_mem, 0, sizeof(chompi_mem));
++#else
      uint32_t *beg, *end;
      size_t    size_in_words = (1024 * 1024 * 64) / sizeof(uint32_t);
      beg                     = (uint32_t*)0xc0000000;

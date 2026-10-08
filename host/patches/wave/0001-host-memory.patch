@@ -1,6 +1,14 @@
 --- a/chompi_main.cpp
 +++ b/chompi_main.cpp
-@@ -28,6 +28,13 @@
+@@ -14,6 +14,7 @@
+  *   3. MainLoop() - Lowest priority, handles UI polling, MIDI I/O, and boot-time stuff.
+  */
+ #include "hardware.h"
++#include <cstring>
+ #include "temp_led_stuff.h"
+ #include "ui.h"
+ #include "daisysp.h"
+@@ -28,6 +29,13 @@
  #include "MidiManager.h"
  
  #define DSY_DTCMRAM_BSS __attribute__((section(".dtcmram_bss")))
@@ -14,7 +22,7 @@
  
  #define MAX_CYCLES 256
  #define MAX_SAMPLES_PER_CYCLE 2048
-@@ -54,7 +61,11 @@
+@@ -54,7 +62,11 @@
  daisysp::Reverb DSY_DTCMRAM_BSS reverb;
  chompi::InterpolatedDelayLine::AudioSample DSY_SDRAM_BSS del_mem[kMaxDelayTime];
  
@@ -26,11 +34,16 @@
  
  daisysp::Oscillator osc;
  
-@@ -129,11 +140,13 @@
+@@ -129,11 +141,18 @@
   *  could play back stale/garbage SDRAM data */
  void ZeroSDRAM()
  {
-+#ifndef NIDHOGG_HOST
++#ifdef NIDHOGG_HOST
++    // Zeroing the big buffers also maps their memory now, at boot, so audio
++    // never waits on the first touch of a page.
++    std::memset(del_mem, 0, sizeof(del_mem));
++    std::memset(wavetableMemory, 0, sizeof(wavetableMemory));
++#else
      uint32_t *beg, *end;
      size_t    size_in_words = (1024 * 1024 * 64) / sizeof(uint32_t);
      beg                     = (uint32_t*)0xc0000000;

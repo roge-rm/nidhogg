@@ -1,0 +1,17 @@
+--- a/ArpeggiatorSequencer.h
++++ b/ArpeggiatorSequencer.h
+@@ -57,6 +57,14 @@
+     };
+ 
+     void Init(BaseEngine **engines, clockManager *clockManager, Hardware *hw, OptionsManager *options) {
++#ifdef NIDHOGG_HOST
++        // The sequencer often reads notes[e][curIdx[e]] without checking the
++        // size. On the Daisy an empty vector's null data reads harmlessly from
++        // address 0; on Linux it faults. With room reserved, those reads land
++        // in allocated memory instead, as they would after notes are removed.
++        for (auto& n : notes)
++            n.reserve(64);
++#endif
+         engines_ = engines;
+         clock_manager_ = clockManager;
+         hw_ = hw;
