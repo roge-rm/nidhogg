@@ -1,6 +1,6 @@
--- Drawing for TAPE. The top 128x32 of the norns screen is also what the
--- OMX-27 shows, so it's drawn at full brightness only; the bottom half is the
--- norns' own copy of Chompi's panel lights.
+-- Drawing for TAPE. view.omx draws the OMX-27's 128x32 screen: only the
+-- basics, in double-size text, at full brightness. view.info and view.panel
+-- draw the norns screen: the details, then Chompi's panel lights.
 
 local view = {}
 
@@ -153,7 +153,108 @@ local function draw_home(s)
   end
 end
 
--- The top 128x32, shared with the OMX-27.
+-- ---- OMX-27 screen -----------------------------------------------------------
+
+-- Short page names for the big text.
+local BIG_PAGES = {
+  [0] = {"PITCH", "GAIN"},
+  [1] = {"START", "ATTACK"},
+  [2] = {"END", "RELEASE"},
+  [3] = {"VERB", "LO-FI", "FILTER"},
+  [4] = {"SPEED"},
+  [5] = {"VOLUME", "INPUT"},
+}
+
+local function big()
+  screen.font_face(1)
+  screen.font_size(16)
+  screen.level(15)
+end
+
+-- A thick bar from y 19 to 31.
+local function big_bar(v, mark_middle)
+  screen.rect(0.5, 19.5, 127, 12)
+  screen.stroke()
+  screen.rect(2, 21, math.floor(v * 124 + 0.5), 9)
+  screen.fill()
+  if mark_middle then
+    screen.level(0)
+    screen.rect(63, 21, 2, 9)
+    screen.fill()
+    screen.level(15)
+  end
+end
+
+-- Looper state as a shape in the 12x12 box at (x, 19).
+local function looper_icon(state, x)
+  if state == 1 then -- armed: hollow dot
+    screen.circle(x + 6, 25, 4.5)
+    screen.stroke()
+  elseif state == 2 or state == 3 then -- recording: dot
+    screen.circle(x + 6, 25, 5)
+    screen.fill()
+  elseif state == 4 then -- playing: triangle
+    screen.move(x + 2, 19)
+    screen.line(x + 12, 25)
+    screen.line(x + 2, 31)
+    screen.close()
+    screen.fill()
+  elseif state == 5 then -- paused: two bars
+    screen.rect(x + 2, 19, 3, 12)
+    screen.rect(x + 8, 19, 3, 12)
+    screen.fill()
+  end
+end
+
+function view.omx(s)
+  big()
+  if s.menu then
+    text(0, 13, "SHIFT")
+    text(127, 13, string.upper((MODES[s.mode] or ""):sub(1, 3) .. " " .. (BANKS[s.bank] or "")), "right")
+    text(0, 30, string.upper(INPUTS[s.input] or ""))
+    text(127, 30, s.fx_pre and "PRE" or "POST", "right")
+  elseif s.focus and util.time() - s.focus_time < 2 then
+    local k = s.focus
+    local page = s.knob_page[k] or 0
+    local v = s.knob_value[k] or 0
+    text(0, 13, (BIG_PAGES[k] or {})[page + 1] or "")
+    text(127, 13, string.upper(value_text(k, page, v)):gsub(" REV", "<"), "right")
+    big_bar(v, (k == 3 and page == 2) or (k == 0 and page == 0) or k == 4)
+    local pot = s.pot[k]
+    if pot and not s.picked[k] and k ~= 4 then
+      -- where the pot is: a gap in the bar
+      local x = math.floor(pot * 124 + 2)
+      screen.level(0)
+      screen.rect(x - 1, 19, 3, 13)
+      screen.fill()
+      screen.level(15)
+      screen.rect(x, 19, 1, 13)
+      screen.fill()
+    end
+  else
+    local slot = s.slot == 15 and "RAM" or tostring(s.slot)
+    text(0, 13, string.upper(BANKS[s.voice_bank] or "") .. " " .. slot)
+    if s.sample_rec then
+      if math.floor(util.time() * 3) % 2 == 0 then text(127, 13, "REC", "right") end
+    elseif s.record_switch then
+      text(127, 13, "REC", "right")
+    end
+    looper_icon(s.looper, 0)
+    if s.looper >= 2 then
+      screen.rect(16.5, 19.5, 111, 12)
+      screen.stroke()
+      screen.rect(18, 21, math.floor((s.looper_pos or 0) * 108 + 0.5), 9)
+      screen.fill()
+    elseif s.looper == 0 then
+      text(18, 30, "EMPTY")
+    end
+  end
+  screen.font_size(8)
+end
+
+-- ---- norns screen --------------------------------------------------------------
+
+-- The top 128x32 of the norns screen: the details.
 function view.info(s)
   if s.menu then
     draw_shift(s)

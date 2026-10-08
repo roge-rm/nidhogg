@@ -19,6 +19,7 @@ engine.name = "Nidhogg"
 local install = include("lib/install")
 local omx = include("lib/omx")
 local view = include("lib/view")
+local saver = include("lib/saver")
 
 local OSC_PORT = 57140 -- TAPE
 local SW = {PLAY = 33, LOOP = 34}
@@ -41,6 +42,15 @@ local POT_TO_KNOB = {[0] = 0, 1, 2, 3, 5}
 local KNOB_TO_ENC = {[0] = 3, 0, 1, 2, 4, 5}
 
 local leds = string.rep("\0", 105)
+
+-- Chompi's bank colours (NormalPage.h): purple, orange, teal, dark orange,
+-- yellow-green; pink for the RAM slot in JAMMI.
+local BANK_COLORS = {
+  [0] = {148, 13, 255}, {255, 153, 61}, {36, 255, 235}, {196, 97, 15}, {180, 255, 0},
+}
+local PINK = {255, 92, 158}
+
+
 local needs_restart = false
 local load_avg, load_max = 0, 0
 
@@ -52,6 +62,11 @@ local s = {
   looper_pos = 0, dub = 1, record_switch = false,
   focus = nil, focus_time = 0,
 }
+
+local function bank_color()
+  if s.mode == 0 and s.slot == 15 then return PINK end
+  return BANK_COLORS[s.voice_bank] or BANK_COLORS[0]
+end
 
 -- K1 or OMX key 11 held: moving a pot pushes its knob instead of turning it.
 -- The push is released with the key, since Chompi acts on the release.
@@ -93,6 +108,7 @@ end
 
 local function start_omx()
   omx.key = function(n, ev)
+    saver.touch()
     if n == OMX_PUSH_KEY then
       if ev == "down" then push_hold("omx", true)
       elseif ev == "up" then push_hold("omx", false) end
@@ -104,11 +120,16 @@ local function start_omx()
     elseif ev == "up" then send("/key", {sw, 0}) end
   end
   omx.enc = function(d)
+    saver.touch()
     send("/turn", {ENC.TRANSPORT, d})
     focus(4)
   end
-  omx.enc_btn = function(z) send("/push", {ENC.TRANSPORT, z}) end
+  omx.enc_btn = function(z)
+    saver.touch()
+    send("/push", {ENC.TRANSPORT, z})
+  end
   omx.pot = function(n, v, hires)
+    saver.touch()
     local knob = POT_TO_KNOB[n]
     local pos = hires / 16383
     s.pot[knob] = pos
@@ -127,7 +148,13 @@ local function start_omx()
   omx.connect()
 end
 
+local SAVER_TIMES = {60, 180, 600, math.huge}
+
 function init()
+  params:add_option("saver", "screensaver after", {"1 min", "3 min", "10 min", "off"}, 2)
+  params:set_action("saver", function(i) saver.delay = SAVER_TIMES[i] end)
+  params:bang()
+
   needs_restart = install.plugins()
   if needs_restart then
     redraw()
@@ -135,28 +162,38 @@ function init()
   end
   engine.start("tape")
   start_omx()
+  -- a reloaded script has none of the firmware's state yet
+  clock.run(function()
+    clock.sleep(0.5)
+    send("/hello", {})
+  end)
   clock.run(function()
     while true do
       clock.sleep(1 / 15)
-      for n = 0, 26 do
-        local i = omx_led_source(n)
-        if i then
-          local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
-          omx.led(n, r or 0, g or 0, b or 0)
+      if saver.active() then
+        for n, c in pairs(saver.leds(bank_color())) do
+          omx.led(n, math.floor(c[1]), math.floor(c[2]), math.floor(c[3]))
         end
+      else
+        for n = 0, 26 do
+          local i = omx_led_source(n)
+          if i then
+            local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
+            omx.led(n, r or 0, g or 0, b or 0)
+          end
+        end
+        -- the push key: white while held, amber when a knob is off its first
+        -- page, else dim
+        local paged = false
+        for k = 0, 5 do
+          if (s.knob_page[k] or 0) > 0 then paged = true end
+        end
+        if k1_held then omx.led(OMX_PUSH_KEY, 255, 255, 255)
+        elseif paged then omx.led(OMX_PUSH_KEY, 255, 120, 0)
+        else omx.led(OMX_PUSH_KEY, 24, 24, 24) end
       end
-      -- the push key: white while held, amber when a knob is off its first
-      -- page, else dim
-      local paged = false
-      for k = 0, 5 do
-        if (s.knob_page[k] or 0) > 0 then paged = true end
-      end
-      if k1_held then omx.led(OMX_PUSH_KEY, 255, 255, 255)
-      elseif paged then omx.led(OMX_PUSH_KEY, 255, 120, 0)
-      else omx.led(OMX_PUSH_KEY, 24, 24, 24) end
       omx.led_show()
       redraw()
-      omx.screen_send(0, 0)
     end
   end)
 end
@@ -189,6 +226,7 @@ function osc.event(path, args, from)
 end
 
 function key(n, z)
+  saver.touch()
   if n == 1 then
     push_hold("k1", z == 1)
   elseif n == 2 then
@@ -199,6 +237,7 @@ function key(n, z)
 end
 
 function enc(n, d)
+  saver.touch()
   if n == 1 then
     s.record_switch = d > 0
     send("/switch", {s.record_switch and 1 or 0})
@@ -224,7 +263,19 @@ function redraw()
     screen.update()
     return
   end
-  view.info(s)
-  view.panel(leds)
+  -- The OMX-27 frame is drawn first and copied off with screen.peek; only
+  -- what's drawn after the second clear reaches the norns screen.
+  if saver.active() then
+    saver.draw()
+    omx.screen_send(0, 0)
+    screen.clear()
+    saver.draw()
+  else
+    view.omx(s)
+    omx.screen_send(0, 0)
+    screen.clear()
+    view.info(s)
+    view.panel(leds)
+  end
   screen.update()
 end

@@ -6,6 +6,7 @@
 //   /push i:encoder i:down     /switch i:record
 //   /pot i:knob f:value        absolute pot, knob 0-5 as Chompi numbers them
 //   /midi s:"trs"|"usb" then b:bytes or i:byte...
+//   /hello                     send everything again, not just changes
 //   /ping   /quit
 // Out (to `reply` on localhost):
 //   /leds b:105 bytes          10 panel then 25 key LEDs, RGB, on change

@@ -23,6 +23,7 @@ std::thread         pump;
 std::atomic<bool>   running{false};
 std::atomic<bool>   quit{false};
 std::atomic<double> last_ping{0};
+std::atomic<bool>   resend{false}; // send everything, not just changes
 std::atomic<float>  load_sum{0}, load_max{0};
 std::atomic<int>    load_n{0};
 
@@ -84,6 +85,11 @@ int on_ping(const char*, const char*, lo_arg**, int, lo_message, void*)
     last_ping = now_s();
     return 0;
 }
+int on_hello(const char*, const char*, lo_arg**, int, lo_message, void*)
+{
+    resend = true;
+    return 0;
+}
 int on_quit(const char*, const char*, lo_arg**, int, lo_message, void*)
 {
     quit = true;
@@ -129,8 +135,11 @@ void pump_main()
     while(running)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        bool all = resend.exchange(false);
+        if(all)
+            first_status = true;
         board::Leds l = board::leds();
-        if(std::memcmp(&l, &last, sizeof(l)) != 0)
+        if(all || std::memcmp(&l, &last, sizeof(l)) != 0)
         {
             last      = l;
             lo_blob b = lo_blob_new(sizeof(l), &l);
@@ -175,6 +184,7 @@ bool start(const std::string& port, const std::string& reply)
     lo_server_thread_add_method(osc, "/midi", nullptr, on_midi, nullptr);
     lo_server_thread_add_method(osc, "/ping", "", on_ping, nullptr);
     lo_server_thread_add_method(osc, "/quit", "", on_quit, nullptr);
+    lo_server_thread_add_method(osc, "/hello", "", on_hello, nullptr);
     lo_server_thread_start(osc);
     to        = lo_address_new("127.0.0.1", reply.c_str());
     last_ping = now_s();
