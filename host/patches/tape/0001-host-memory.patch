@@ -1,0 +1,30 @@
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -11,6 +11,13 @@
+ #include "OptionsManager.h"
+ 
+ #define DSY_DTCMRAM_BSS __attribute__((section(".dtcmram_bss")))
++#ifdef NIDHOGG_HOST
++// Plain zeroed arrays on the host; the Daisy's memory sections don't exist.
++#undef DSY_DTCMRAM_BSS
++#define DSY_DTCMRAM_BSS
++#undef DSY_SDRAM_BSS
++#define DSY_SDRAM_BSS
++#endif
+ 
+ using namespace daisy;
+ using namespace chompi;
+@@ -104,11 +111,13 @@
+ 
+ void ZeroSDRAM()
+ {
++#ifndef NIDHOGG_HOST
+     uint32_t *beg, *end;
+     size_t    size_in_words = (1024 * 1024 * 64) / sizeof(uint32_t);
+     beg                     = (uint32_t*)0xc0000000;
+     end                     = (uint32_t*)(beg + size_in_words);
+     std::fill(beg, end, 0);
++#endif
+ }
+ 
+ bool no_sd_card = false;
