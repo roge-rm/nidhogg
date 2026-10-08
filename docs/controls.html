@@ -1,0 +1,217 @@
+<title>nidhogg controls</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=Chivo+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column, hardware drawings first, mapping table after. Panel colours echo the OMX-27's grey caps. */
+:root {
+  --bg: #eef0f1;
+  --panel: #fbfbfa;
+  --edge: #8d969c;
+  --cap: #c9cdd0;
+  --cap-ink: #2a2f33;
+  --fg: #1f2427;
+  --muted: #5f686e;
+  --note: #d9e6f2;     /* note keys */
+  --func: #f3dcc4;     /* Chompi shift functions on black keys */
+  --chompi: #e3d3f0;   /* CHOMPI, transport, looper */
+  --knob: #d6ecd9;     /* knobs */
+  --open: #fff3b8;     /* proposed, not settled */
+  --open-edge: #b38f00;
+  --accent: #7a3fb0;
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Chivo Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15191b; --panel: #1f2427; --edge: #6c767c; --cap: #3a4146; --cap-ink: #e8ecee;
+  --fg: #e6eaec; --muted: #9aa4aa; --note: #24394d; --func: #4a3420; --chompi: #3a2a4d;
+  --knob: #22402a; --open: #4a3f10; --open-edge: #e0c040; --accent: #c49af0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15191b; --panel: #1f2427; --edge: #6c767c; --cap: #3a4146; --cap-ink: #e8ecee;
+  --fg: #e6eaec; --muted: #9aa4aa; --note: #24394d; --func: #4a3420; --chompi: #3a2a4d;
+  --knob: #22402a; --open: #4a3f10; --open-edge: #e0c040; --accent: #c49af0; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--display); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 48px; display: grid; gap: 28px; }
+h1 { font-size: 30px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 18px; margin: 0 0 8px; text-wrap: balance; }
+p { margin: 0; max-width: 65ch; color: var(--muted); }
+.lede { display: grid; gap: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font: 12px var(--mono); color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--edge); }
+.sw.open { border: 1.5px dashed var(--open-edge); }
+.scroll { overflow-x: auto; }
+svg { display: block; }
+svg text { font-family: var(--mono); fill: var(--cap-ink); }
+svg .lbl { fill: var(--fg); font-size: 12px; }
+svg .sub { fill: var(--muted); font-size: 10.5px; }
+svg .hw { fill: var(--muted); font-size: 10px; letter-spacing: 0.06em; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--cap); vertical-align: top; }
+th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+td:first-child { white-space: nowrap; }
+.tag { font: 11px var(--mono); padding: 1px 6px; border-radius: 3px; background: var(--open); border: 1px dashed var(--open-edge); white-space: nowrap; }
+ul { margin: 0; padding-left: 20px; max-width: 70ch; }
+li { margin-bottom: 4px; }
+</style>
+
+<div class="wrap">
+  <header class="lede">
+    <h1>nidhogg controls</h1>
+    <p>Draft mapping of Chompi TAPE's panel onto an OMX-27 and a ShieldXL norns. The OMX-27 runs Quixotic7's firmware (v1.15.4 or later) in REMOTE mode, so the norns can light every key and draw on its OLED. TEMPO and WAVE use the same Chompi panel, so the same layout serves all three modes. Dashed yellow parts are proposals still open.</p>
+  </header>
+
+  <div class="legend" aria-label="Legend">
+    <span><i class="sw" style="background:var(--note)"></i>note key (slot)</span>
+    <span><i class="sw" style="background:var(--func)"></i>black key, its shift function below</span>
+    <span><i class="sw" style="background:var(--chompi)"></i>CHOMPI / looper</span>
+    <span><i class="sw" style="background:var(--knob)"></i>knob (pages)</span>
+    <span><i class="sw open" style="background:var(--open)"></i>proposal, open</span>
+  </div>
+
+  <section>
+    <h2>OMX-27</h2>
+    <div class="scroll">
+      <svg viewBox="0 0 1000 330" width="1000" height="330" role="img" aria-label="OMX-27 panel with Chompi functions on each key, pot and the encoder">
+        <rect x="4" y="4" width="992" height="322" rx="10" fill="var(--panel)" stroke="var(--edge)"/>
+
+        <!-- AUX = CHOMPI -->
+        <rect x="20" y="40" width="64" height="64" rx="8" fill="var(--chompi)" stroke="var(--edge)"/>
+        <text x="52" y="70" text-anchor="middle" font-size="12" font-weight="600">CHOMPI</text>
+        <text x="52" y="86" text-anchor="middle" font-size="9.5">shift / rec</text>
+        <text x="52" y="30" text-anchor="middle" class="hw">AUX</text>
+
+        <!-- pots: labels above -->
+        <g>
+          <circle cx="215" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/>
+          <text x="215" y="56" text-anchor="middle" class="lbl">Pitch</text>
+          <text x="215" y="70" text-anchor="middle" class="sub">gain</text>
+          <circle cx="305" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/>
+          <text x="305" y="56" text-anchor="middle" class="lbl">Start</text>
+          <text x="305" y="70" text-anchor="middle" class="sub">attack</text>
+          <circle cx="400" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/>
+          <text x="400" y="56" text-anchor="middle" class="lbl">End</text>
+          <text x="400" y="70" text-anchor="middle" class="sub">release</text>
+          <circle cx="490" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/>
+          <text x="490" y="56" text-anchor="middle" class="lbl">Magic</text>
+          <text x="490" y="70" text-anchor="middle" class="sub">verb+delay</text>
+          <text x="490" y="82" text-anchor="middle" class="sub">lo-fi · filter</text>
+
+          <rect x="525" y="90" width="112" height="30" rx="2" fill="var(--cap)" stroke="var(--edge)"/>
+          <text x="581" y="110" text-anchor="middle" font-size="10.5">knob · page · value</text>
+          <text x="581" y="70" text-anchor="middle" class="sub">OLED</text>
+
+          <polygon points="693,104 699,92 711,92 717,104 711,116 699,116" fill="var(--chompi)" stroke="var(--edge)"/>
+          <text x="705" y="56" text-anchor="middle" class="lbl">Transport</text>
+          <text x="705" y="70" text-anchor="middle" class="sub">push: 1x</text>
+
+          <circle cx="780" cy="104" r="16" fill="var(--knob)" stroke="var(--edge)"/>
+          <text x="780" y="56" text-anchor="middle" class="lbl">Volume</text>
+          <text x="780" y="70" text-anchor="middle" class="sub">input gain</text>
+          <text x="215" y="132" text-anchor="middle" class="hw">POT 1</text>
+          <text x="305" y="132" text-anchor="middle" class="hw">POT 2</text>
+          <text x="400" y="132" text-anchor="middle" class="hw">POT 3</text>
+          <text x="490" y="132" text-anchor="middle" class="hw">POT 4</text>
+          <text x="705" y="132" text-anchor="middle" class="hw">ENCODER</text>
+          <text x="780" y="132" text-anchor="middle" class="hw">POT 5</text>
+        </g>
+
+        <!-- top (black) keys: x = 20 + i*60 + 30 -->
+        <g font-size="11">
+          <g transform="translate(110,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">C#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">JAMMI</text><text x="27" y="52" text-anchor="middle" font-size="9">bank</text></g>
+          <g transform="translate(170,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">D#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">CUBBI</text><text x="27" y="52" text-anchor="middle" font-size="9">bank</text></g>
+          <g transform="translate(290,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">F#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">in: mic</text></g>
+          <g transform="translate(350,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">G#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">in: line</text></g>
+          <g transform="translate(410,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">A#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">in:</text><text x="27" y="52" text-anchor="middle" font-size="9.5">resamp</text></g>
+          <g transform="translate(530,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">C#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">FX pre</text><text x="27" y="52" text-anchor="middle" font-size="9">looper</text></g>
+          <g transform="translate(590,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">D#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">FX post</text><text x="27" y="52" text-anchor="middle" font-size="9">looper</text></g>
+          <g transform="translate(710,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">F#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">erase</text></g>
+          <g transform="translate(770,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">G#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">copy</text></g>
+          <g transform="translate(830,148)"><rect width="54" height="62" rx="6" fill="var(--func)" stroke="var(--edge)"/><text x="27" y="22" text-anchor="middle" font-weight="600">A#</text><text x="27" y="40" text-anchor="middle" font-size="9.5">save</text></g>
+        </g>
+
+        <!-- bottom (white) keys: x = 20 + i*60 -->
+        <g font-size="11">
+          <g transform="translate(20,222)"><rect width="54" height="80" rx="6" fill="var(--cap)" stroke="var(--edge)"/><text x="27" y="34" text-anchor="middle" font-size="10" font-weight="600">unused</text><text x="27" y="50" text-anchor="middle" font-size="9">easy to hit</text><text x="27" y="70" text-anchor="middle" class="sub">B3</text></g>
+          <g transform="translate(80,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">C3</text><text x="27" y="62" text-anchor="middle" font-size="10">slot 1</text></g>
+          <g transform="translate(140,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">D</text><text x="27" y="62" text-anchor="middle" font-size="10">2</text></g>
+          <g transform="translate(200,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">E</text><text x="27" y="62" text-anchor="middle" font-size="10">3</text></g>
+          <g transform="translate(260,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">F</text><text x="27" y="62" text-anchor="middle" font-size="10">4</text></g>
+          <g transform="translate(320,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">G</text><text x="27" y="62" text-anchor="middle" font-size="10">5</text></g>
+          <g transform="translate(380,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">A</text><text x="27" y="62" text-anchor="middle" font-size="10">6</text></g>
+          <g transform="translate(440,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">B</text><text x="27" y="62" text-anchor="middle" font-size="10">7</text></g>
+          <g transform="translate(500,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">C4</text><text x="27" y="62" text-anchor="middle" font-size="10">8</text></g>
+          <g transform="translate(560,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">D</text><text x="27" y="62" text-anchor="middle" font-size="10">9</text></g>
+          <g transform="translate(620,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">E</text><text x="27" y="62" text-anchor="middle" font-size="10">10</text></g>
+          <g transform="translate(680,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">F</text><text x="27" y="62" text-anchor="middle" font-size="10">11</text></g>
+          <g transform="translate(740,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">G</text><text x="27" y="62" text-anchor="middle" font-size="10">12</text></g>
+          <g transform="translate(800,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">A</text><text x="27" y="62" text-anchor="middle" font-size="10">13</text></g>
+          <g transform="translate(860,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">B</text><text x="27" y="62" text-anchor="middle" font-size="10">14</text></g>
+          <g transform="translate(920,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">C5</text><text x="27" y="56" text-anchor="middle" font-size="10">15</text><text x="27" y="69" text-anchor="middle" font-size="9">RAM</text></g>
+        </g>
+      </svg>
+    </div>
+    <p style="margin-top:8px">Note names are Chompi's (C3 to C5). Every key LED shows what Chompi's LED for that key shows: bank colours, playing voices, menu state. AUX shows Chompi's CHOMPI LED. B3 is left unused since it's easy to hit by accident. Pots send 14-bit values in REMOTE mode. AUX + hold the encoder button leaves REMOTE mode.</p>
+  </section>
+
+  <section>
+    <h2>norns (ShieldXL)</h2>
+    <div class="scroll">
+      <svg viewBox="0 0 640 330" width="640" height="330" role="img" aria-label="ShieldXL norns: K1 and E1 top left, screen lower left, E2 and E3 right with K2 and K3 below them">
+        <rect x="4" y="4" width="632" height="322" rx="10" fill="var(--panel)" stroke="var(--edge)"/>
+        <!-- K1, E1 top left -->
+        <rect x="24" y="24" width="48" height="48" rx="6" fill="var(--open)" stroke="var(--open-edge)" stroke-dasharray="4 3" stroke-width="1.5"/>
+        <text x="48" y="44" text-anchor="middle" font-size="11" font-weight="600">K1</text>
+        <text x="48" y="60" text-anchor="middle" font-size="9">hold</text>
+        <circle cx="106" cy="48" r="20" fill="var(--chompi)" stroke="var(--edge)"/>
+        <text x="106" y="52" text-anchor="middle" font-size="11" font-weight="600">E1</text>
+        <text x="140" y="42" class="lbl">E1: Play/Record switch</text>
+        <text x="140" y="56" class="sub">left Play, right Record</text>
+        <text x="140" y="74" class="lbl">K1 held + move a pot = push it</text>
+        <!-- screen lower left -->
+        <rect x="24" y="110" width="300" height="190" rx="3" fill="var(--cap)" stroke="var(--edge)"/>
+        <text x="174" y="180" text-anchor="middle" font-size="12" font-weight="600">screen</text>
+        <text x="174" y="202" text-anchor="middle" font-size="10.5">Chompi's 10 panel LEDs,</text>
+        <text x="174" y="218" text-anchor="middle" font-size="10.5">mode, bank, slot, looper</text>
+        <!-- E2 E3 right -->
+        <circle cx="448" cy="150" r="20" fill="var(--open)" stroke="var(--open-edge)" stroke-dasharray="4 3" stroke-width="1.5"/>
+        <text x="448" y="154" text-anchor="middle" font-size="11" font-weight="600">E2</text>
+        <circle cx="548" cy="150" r="20" fill="var(--open)" stroke="var(--open-edge)" stroke-dasharray="4 3" stroke-width="1.5"/>
+        <text x="548" y="154" text-anchor="middle" font-size="11" font-weight="600">E3</text>
+        <text x="448" y="190" text-anchor="middle" class="sub">spare</text>
+        <text x="548" y="186" text-anchor="middle" class="sub">fine adjust,</text>
+        <text x="548" y="199" text-anchor="middle" class="sub">last pot moved</text>
+        <!-- K2 K3 below -->
+        <rect x="420" y="232" width="56" height="56" rx="6" fill="var(--open)" stroke="var(--open-edge)" stroke-dasharray="4 3" stroke-width="1.5"/>
+        <text x="448" y="256" text-anchor="middle" font-size="11" font-weight="600">K2</text>
+        <text x="448" y="272" text-anchor="middle" font-size="9.5">PLAY</text>
+        <rect x="520" y="232" width="56" height="56" rx="6" fill="var(--open)" stroke="var(--open-edge)" stroke-dasharray="4 3" stroke-width="1.5"/>
+        <text x="548" y="256" text-anchor="middle" font-size="11" font-weight="600">K3</text>
+        <text x="548" y="272" text-anchor="middle" font-size="9.5">LOOP</text>
+      </svg>
+    </div>
+    <p style="margin-top:8px">Laid out like the ShieldXL. The screen shows which way the Play/Record switch is set.</p>
+  </section>
+
+  <section>
+    <h2>Full list</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Chompi</th><th>Goes to</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>15 white keys</td><td>OMX bottom keys 12-26</td><td>Slot 1-14 from the card, 15 is the RAM recording</td></tr>
+          <tr><td>10 black keys</td><td>OMX top keys 1-10</td><td>Notes in JAMMI; with CHOMPI held: bank, input, FX order, erase, copy, save</td></tr>
+          <tr><td>CHOMPI key</td><td>OMX AUX</td><td>Shift in Play mode, records in Record mode</td></tr>
+          <tr><td>Pitch, Start, End, Magic, Volume</td><td>OMX pots 1-4 and 5</td><td>Each pot picks up its page's value when it passes it</td></tr>
+          <tr><td>Transport knob and push</td><td>OMX encoder and push</td><td>Endless like Chompi's, so scrubbing works the same</td></tr>
+          <tr><td>Play/Record switch</td><td>norns E1</td><td>Turn left for Play, right for Record</td></tr>
+          <tr><td>PLAY, LOOP</td><td>norns K2, K3</td><td><span class="tag">open</span></td></tr>
+          <tr><td>5 knob pushes</td><td>norns K1 held + move a pot</td><td><span class="tag">open</span> Page change, and with CHOMPI the shift pushes (resets, auto-loop, sustain, monitor)</td></tr>
+          <tr><td>25 key LEDs, CHOMPI LED</td><td>OMX key LEDs</td><td>Same colours as Chompi</td></tr>
+          <tr><td>Knob and looper LEDs</td><td>norns screen</td><td>The OMX OLED shows the knob being moved, its page and value</td></tr>
+          <tr><td>(none)</td><td>norns E2, OMX B3</td><td><span class="tag">open</span> Spare. B3 stays unused since it's easy to hit</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

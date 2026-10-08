@@ -52,8 +52,8 @@ nidhogg talks to it with its own small Lua client written from that spec, since 
 | Pitch, Start, End, Magic, Volume knobs | OMX pots 1-5 |
 | Transport knob and push | OMX encoder and push |
 | Knob pushes (page change, shift pushes) | open, see questions |
-| Play/Record switch | open, see questions |
-| spare | OMX key 11 (B3), norns K1-K3, E1-E3 |
+| Play/Record switch | norns E1: left Play, right Record |
+| spare | OMX key 11 (B3, unused: easy to hit by accident), norns E2 |
 
 Chompi's knobs are endless encoders with up to 3 pages each, and the pots are absolute, so each pot picks up its page's value when it passes it (soft takeover).
 
@@ -68,6 +68,6 @@ Chompi's knobs are endless encoders with up to 3 pages each, and the pots are ab
 
 ## Open questions
 
-1. PLAY, LOOP, the five knob pushes and the Play/Record switch have no obvious home. One idea: norns K2 = PLAY and K3 = LOOP, the B3 key = Play/Record switch (toggle, LED shows state), and the encoder pushes come from holding norns K1 and moving a pot, or from norns E1-E3. TEMPO and WAVE use the same panel, so one mapping serves all three.
+1. PLAY on K2, LOOP on K3 and the knob pushes as K1 held + move a pot are still to be confirmed. TEMPO and WAVE use the same panel, so one mapping serves all three.
 2. Do you have a real Chompi to compare against? That would make "sounds just like one" testable.
 3. The factory samples fall under Chompi's MIT licence, so nidhogg can ship them. They're 190 MB, so I'd rather fetch them from the Chompi repo on first run than keep them in our git. Is that OK?
