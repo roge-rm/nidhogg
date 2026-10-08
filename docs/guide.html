@@ -118,7 +118,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
           <text x="500" y="200" text-anchor="middle" class="sub">black keys play notes; with AUX held they're the shift menu</text>
         </g>
         <g font-size="11">
-          <g transform="translate(20,222)"><rect width="54" height="80" rx="6" fill="var(--cap)" stroke="var(--edge)"/><text x="27" y="44" text-anchor="middle" font-size="10">unused</text></g>
+          <g transform="translate(20,222)"><rect width="54" height="80" rx="6" fill="var(--knob)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-size="11" font-weight="600">PUSH</text><text x="27" y="46" text-anchor="middle" font-size="9">hold +</text><text x="27" y="58" text-anchor="middle" font-size="9">move pot</text></g>
           <g transform="translate(80,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">C</text><text x="27" y="62" text-anchor="middle" font-size="10">1</text></g>
           <g transform="translate(140,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">D</text><text x="27" y="62" text-anchor="middle" font-size="10">2</text></g>
           <g transform="translate(200,222)"><rect width="54" height="80" rx="6" fill="var(--note)" stroke="var(--edge)"/><text x="27" y="30" text-anchor="middle" font-weight="600">E</text><text x="27" y="62" text-anchor="middle" font-size="10">3</text></g>
@@ -141,7 +141,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
       <div class="scroll">
         <svg viewBox="0 0 420 250" width="420" height="250" role="img" aria-label="ShieldXL norns: K1 and E1 top left, screen lower left, E2 and E3 right with K2 and K3 below">
           <rect x="4" y="4" width="412" height="242" rx="10" fill="var(--panel)" stroke="var(--edge)"/>
-          <rect x="18" y="18" width="40" height="40" rx="6" fill="var(--cap)" stroke="var(--edge)"/><text x="38" y="36" text-anchor="middle" font-size="11" font-weight="600">K1</text><text x="38" y="50" text-anchor="middle" font-size="8.5">hold</text>
+          <rect x="18" y="18" width="40" height="40" rx="6" fill="var(--cap)" stroke="var(--edge)"/><text x="38" y="36" text-anchor="middle" font-size="11" font-weight="600">K1</text><text x="38" y="50" text-anchor="middle" font-size="8.5">push</text>
           <circle cx="86" cy="38" r="17" fill="var(--chompi)" stroke="var(--edge)"/><text x="86" y="42" text-anchor="middle" font-size="11" font-weight="600">E1</text>
           <text x="112" y="34" class="lbl">E1: Play / Record</text><text x="112" y="48" class="sub">left Play · right Record</text>
           <rect x="18" y="86" width="210" height="140" rx="3" fill="var(--oled-bg)" stroke="var(--edge)"/>
@@ -157,7 +157,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
       <div style="display:grid;gap:10px">
         <p><kbd class="k-chompi">E1</kbd> is Chompi's Play/Record switch. In Play, <kbd class="k-chompi">AUX</kbd> is shift. In Record, it records.</p>
         <p><kbd class="k-chompi">K2</kbd> and <kbd class="k-chompi">K3</kbd> run the looper.</p>
-        <p><kbd>K1</kbd> held while you nudge a pot <b>pushes</b> that knob, which steps it to its next page.</p>
+        <p>Hold the leftmost bottom key, <kbd class="k-knob">PUSH</kbd> (or <kbd>K1</kbd> on the norns), and nudge a pot to <b>push</b> that knob, which steps it to its next page. PUSH lights amber while any knob is off its first page.</p>
         <p class="note">Every OMX key lights up with the colour Chompi's own key would show.</p>
       </div>
     </div>
@@ -167,7 +167,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
     <h2>Knobs and pages</h2>
     <div class="cols">
       <div style="display:grid;gap:10px">
-        <p>Each knob has two or three jobs, called pages. Hold <kbd>K1</kbd> and nudge the pot to step to the next page. The screen shows which page you're on as dots.</p>
+        <p>Each knob has two or three jobs, called pages. Hold <kbd class="k-knob">PUSH</kbd> and nudge the pot to step to the next page. The screen shows which page you're on as dots.</p>
         <p>A pot does nothing until you sweep it past the knob's current setting, then it takes over. Until then the screen shows a small triangle where the pot is, and which way to sweep.</p>
       </div>
       <div class="oled-fig">

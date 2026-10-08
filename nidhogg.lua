@@ -7,8 +7,9 @@
 -- pots = pitch start end magic volume
 -- (a pot takes over once it passes
 -- the knob's value)
--- K1 held + move a pot: push that
--- knob (next page)
+-- K1 or the OMX's leftmost bottom key
+-- held + move a pot: push that knob
+-- (next page)
 -- K2 play, K3 loop
 -- E1 play/record switch
 -- E2 transport, E3 volume
@@ -52,14 +53,29 @@ local s = {
   focus = nil, focus_time = 0,
 }
 
--- K1 held: moving a pot pushes its knob instead of turning it. The push is
--- released with K1, since Chompi acts on the release.
-local k1_held = false
-local pot_from = {} -- pot position when K1 went down, by knob
+-- K1 or OMX key 11 held: moving a pot pushes its knob instead of turning it.
+-- The push is released with the key, since Chompi acts on the release.
+local OMX_PUSH_KEY = 11
+local push_holds = {} -- which of K1 and the OMX key are down
+local k1_held = false -- either is held
+local pot_from = {} -- pot position when the hold began, by knob
 local pushing = {}  -- encoders pushed during this hold
 
 local function send(path, args)
   osc.send({"127.0.0.1", OSC_PORT}, path, args)
+end
+
+local function push_hold(who, held)
+  push_holds[who] = held or nil
+  local any = next(push_holds) ~= nil
+  if any and not k1_held then
+    for k, pos in pairs(s.pot) do pot_from[k] = pos end
+  elseif not any and k1_held then
+    for enc in pairs(pushing) do send("/push", {enc, 0}) end
+    pushing = {}
+    pot_from = {}
+  end
+  k1_held = any
 end
 
 local function focus(knob)
@@ -77,6 +93,11 @@ end
 
 local function start_omx()
   omx.key = function(n, ev)
+    if n == OMX_PUSH_KEY then
+      if ev == "down" then push_hold("omx", true)
+      elseif ev == "up" then push_hold("omx", false) end
+      return
+    end
     local sw = OMX_TO_SW[n]
     if not sw then return end
     if ev == "down" then send("/key", {sw, 1})
@@ -124,6 +145,15 @@ function init()
           omx.led(n, r or 0, g or 0, b or 0)
         end
       end
+      -- the push key: white while held, amber when a knob is off its first
+      -- page, else dim
+      local paged = false
+      for k = 0, 5 do
+        if (s.knob_page[k] or 0) > 0 then paged = true end
+      end
+      if k1_held then omx.led(OMX_PUSH_KEY, 255, 255, 255)
+      elseif paged then omx.led(OMX_PUSH_KEY, 255, 120, 0)
+      else omx.led(OMX_PUSH_KEY, 24, 24, 24) end
       omx.led_show()
       redraw()
       omx.screen_send(0, 0)
@@ -160,13 +190,7 @@ end
 
 function key(n, z)
   if n == 1 then
-    k1_held = z == 1
-    if k1_held then
-      for k, pos in pairs(s.pot) do pot_from[k] = pos end
-    else
-      for enc in pairs(pushing) do send("/push", {enc, 0}) end
-      pushing = {}
-    end
+    push_hold("k1", z == 1)
   elseif n == 2 then
     send("/key", {SW.PLAY, z})
   elseif n == 3 then
