@@ -20,7 +20,7 @@ Engine_Nidhogg : CroneEngine {
 
     startFirmware { arg fw;
         var card = Platform.userHomeDir ++ "/dust/audio/nidhogg/" ++ fw;
-        var ugen = "nidhogg" ++ fw[0].toUpper ++ fw.copyToEnd(1);
+        var ugen = "Nidhogg" ++ fw[0].toUpper ++ fw.copyToEnd(1);
         synth !? { synth.free; synth = nil };
         context.server.sendMsg(\cmd, ugen ++ "Start", card);
         synth = Synth(("nidhogg_" ++ fw).asSymbol, [

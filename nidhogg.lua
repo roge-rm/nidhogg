@@ -2,6 +2,9 @@
 -- Chompi on norns
 --
 -- test build: TAPE only
+-- OMX-27 in REMOTE mode: keys,
+-- AUX = CHOMPI, encoder = transport,
+-- pots = pitch start end magic volume
 -- K2 play, K3 loop
 -- E1 play/record switch
 -- E2 transport, E3 volume
@@ -9,10 +12,34 @@
 engine.name = "Nidhogg"
 
 local install = include("lib/install")
+local omx = include("lib/omx")
 
 local OSC_PORT = 57140 -- TAPE
 local SW = {PLAY = 33, LOOP = 34}
 local ENC = {TRANSPORT = 4, VOLUME = 5} -- hardware encoders SW5, SW6
+
+-- OMX-27 key -> Chompi switch id (Hardware::SwId). Bottom keys 12-26 are
+-- Chompi's white keys C3-C5, top keys 1-10 its black keys, AUX the CHOMPI key.
+local OMX_TO_SW = {
+  [0] = 5,
+  [1] = 7, [2] = 12, [3] = 13, [4] = 14, [5] = 21,
+  [6] = 22, [7] = 23, [8] = 29, [9] = 30, [10] = 31,
+  [12] = 15, [13] = 8, [14] = 9, [15] = 10, [16] = 11, [17] = 16, [18] = 17,
+  [19] = 18, [20] = 19, [21] = 20, [22] = 24, [23] = 25, [24] = 26, [25] = 27,
+  [26] = 28,
+}
+-- OMX pot -> hardware encoder: pitch SW4, start SW1, end SW2, magic SW3,
+-- volume SW6
+local POT_TO_ENC = {[0] = 3, 0, 1, 2, 5}
+local pot_last = {}
+
+-- Chompi key LED (0-24) for an OMX key, and AUX shows the CHOMPI LED.
+local function omx_led_source(n)
+  if n == 0 then return 0 end -- panel LED 0
+  if n >= 1 and n <= 10 then return 10 + (n - 1) end -- black keys: SMT 0-9
+  if n >= 12 then return 10 + (25 - (n - 11)) end -- white keys: SMT 24-10
+  return nil
+end
 
 local leds = string.rep("\0", 105)
 local recording = false
@@ -30,12 +57,42 @@ function init()
     return
   end
   engine.start("tape")
+
+  omx.key = function(n, ev)
+    local sw = OMX_TO_SW[n]
+    if not sw then return end
+    if ev == "down" then send("/key", {sw, 1})
+    elseif ev == "up" then send("/key", {sw, 0}) end
+  end
+  omx.enc = function(d) send("/turn", {ENC.TRANSPORT, d}) end
+  omx.enc_btn = function(z) send("/push", {ENC.TRANSPORT, z}) end
+  omx.pot = function(n, v)
+    if pot_last[n] then
+      local d = v - pot_last[n]
+      if d ~= 0 then send("/turn", {POT_TO_ENC[n], d}) end
+    end
+    pot_last[n] = v
+  end
+  omx.connect()
+
   clock.run(function()
     while true do
       clock.sleep(1 / 15)
+      for n = 0, 26 do
+        local i = omx_led_source(n)
+        if i then
+          local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
+          omx.led(n, r or 0, g or 0, b or 0)
+        end
+      end
+      omx.led_show()
       redraw()
     end
   end)
+end
+
+function cleanup()
+  omx.disconnect()
 end
 
 function osc.event(path, args, from)
