@@ -99,7 +99,8 @@ local function run(cmd, done)
 end
 
 -- Finds packs on the stick and in the import folder, and the places firmware
--- fw can take them. done(packs, targets): packs {name, source, count},
+-- fw can take them. done(packs, targets): packs {name, source, count, kind},
+-- kind being what CHOMPI mode the files are named for, if any;
 -- targets {id, label, count}, count being the samples already there, and
 -- bad the zips that couldn't be read.
 function imp.scan(fw, card, done)
@@ -108,11 +109,11 @@ function imp.scan(fw, card, done)
   run("python3 " .. q(PY) .. " scan " .. fw .. " " .. q(card) .. " " .. roots, function(_, out)
     local packs, targets, bad = {}, {}, {}
     for line in out:gmatch("[^\n]+") do
-      local kind, a, b, n = line:match("^(%a+)\t([^\t]*)\t([^\t]*)\t(%d+)$")
+      local kind, a, b, n, hint = line:match("^(%a+)\t([^\t]*)\t([^\t]*)\t(%d+)\t?(.*)$")
       if kind == "bad" then
         bad[#bad + 1] = a
       elseif kind == "pack" then
-        packs[#packs + 1] = {name = a, source = b, count = tonumber(n)}
+        packs[#packs + 1] = {name = a, source = b, count = tonumber(n), kind = hint ~= "-" and hint or nil}
       elseif kind == "target" then
         targets[#targets + 1] = {id = a, label = b, count = tonumber(n)}
       end

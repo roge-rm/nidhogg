@@ -470,6 +470,21 @@ end
 -- imports (asking first if that replaces samples) and K2 backs out.
 local function current_fw() return modes.order[params:get("firmware")] end
 
+-- The first empty place for the pack, in the mode its files are named for.
+local function default_target(u)
+  local kind = u.packs[u.p] and u.packs[u.p].kind
+  local first_empty
+  for i, t in ipairs(u.targets) do
+    local mode = t.id:match("^(%a+)")
+    if t.count == 0 and (not kind or mode == kind) then return i end
+    if t.count == 0 then first_empty = first_empty or i end
+  end
+  for i, t in ipairs(u.targets) do
+    if kind and t.id:match("^(%a+)") == kind then return i end
+  end
+  return first_empty or 1
+end
+
 open_import = function()
   if importer and importer.state == "working" then return end
   local fw = current_fw()
@@ -477,10 +492,8 @@ open_import = function()
   import.scan(fw, install.card_dir(fw), function(packs, targets, bad)
     if not importer or importer.state ~= "scanning" then return end
     importer.packs, importer.targets, importer.bad = packs, targets, bad
-    importer.p, importer.t = 1, 1
-    for i, t in ipairs(targets) do
-      if t.count == 0 then importer.t = i; break end
-    end
+    importer.p = 1
+    importer.t = default_target(importer)
     importer.state = #packs > 0 and "choose" or "empty"
   end)
 end
@@ -519,8 +532,11 @@ local function draw_import()
     screen.move(64, y)
     screen.text_center(text)
   end
+  -- keeps the end of a long name, which is the part that tells packs apart
   local function fit(text)
-    return #text > 30 and ("..." .. text:sub(-27)) or text
+    if screen.text_extents(text) <= 124 then return text end
+    while #text > 1 and screen.text_extents("..." .. text) > 124 do text = text:sub(2) end
+    return "..." .. text
   end
   line(10, 15, "IMPORT")
   if u.state == "scanning" then
@@ -607,8 +623,14 @@ function enc(n, d)
   if importer then
     local u = importer
     if u.state == "choose" then
-      if n == 2 then u.p = util.clamp(u.p + d, 1, #u.packs) end
-      if n == 3 then u.t = util.clamp(u.t + d, 1, #u.targets) end
+      if n == 2 then
+        u.p = util.clamp(u.p + d, 1, #u.packs)
+        if not u.t_chosen then u.t = default_target(u) end
+      end
+      if n == 3 then
+        u.t = util.clamp(u.t + d, 1, #u.targets)
+        u.t_chosen = true
+      end
     end
     return
   end

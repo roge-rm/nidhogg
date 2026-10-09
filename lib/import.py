@@ -3,7 +3,9 @@
 card format. Run by lib/import.lua on the norns.
 
   import.py scan FW CARD ROOT...
-      Lists packs under each ROOT, one per line: "pack<TAB>name<TAB>source<TAB>count",
+      Lists packs under each ROOT, one per line:
+      "pack<TAB>name<TAB>source<TAB>count<TAB>kind", kind being what the files
+      are named for (jammi, cubbi, chroma, slice) or "-",
       and zips it can't read as "bad<TAB>file<TAB>-<TAB>0".
       A pack is a folder with audio files in it, or such a folder inside a zip;
       source is the folder or "zipfile::folder". Then the targets for firmware
@@ -61,6 +63,15 @@ def natural(name):
 
 # --- finding packs ---------------------------------------------------------
 
+def kind_of(files):
+    """jammi, cubbi, chroma or slice if most files are named for it, else "-"."""
+    kinds = [m.group(1).lower() for m in (NAMED.match(os.path.basename(f)) for f in files) if m]
+    if not kinds:
+        return "-"
+    best = max(set(kinds), key=kinds.count)
+    return best if kinds.count(best) * 2 > len(files) else "-"
+
+
 def scan_root(root):
     packs = []
     root = root.rstrip("/")
@@ -72,7 +83,7 @@ def scan_root(root):
         audio = [f for f in files if is_audio(f)]
         if audio:
             name = "loose files" if rel == "." else rel
-            packs.append((name, d, len(audio)))
+            packs.append((name, d, len(audio), kind_of(audio)))
         for f in sorted(files, key=natural):
             if f.lower().endswith(".zip") and not f.startswith("."):
                 packs += scan_zip(os.path.join(d, f))
@@ -93,8 +104,12 @@ def scan_zip(path):
     zname = os.path.splitext(os.path.basename(path))[0]
     out = []
     for folder in sorted(folders, key=natural):
-        name = zname if folder == "" else zname + "/" + folder
-        out.append((name, path + "::" + folder, len(folders[folder])))
+        # drop a folder named like the zip, as most zips have one
+        parts = [zname] + [x for x in folder.split("/") if x]
+        if len(parts) > 1 and parts[1] == zname:
+            parts.pop(1)
+        out.append(("/".join(parts), path + "::" + folder, len(folders[folder]),
+                    kind_of(folders[folder])))
     return out
 
 
@@ -308,8 +323,8 @@ def main(argv):
         fw, card, roots = argv[2], argv[3], argv[4:]
         for root in roots:
             if os.path.isdir(root):
-                for name, src, n in scan_root(root):
-                    print("pack\t%s\t%s\t%d" % (name, src, n))
+                for name, src, n, kind in scan_root(root):
+                    print("pack\t%s\t%s\t%d\t%s" % (name, src, n, kind))
         for t, label, n in targets(fw, card):
             print("target\t%s\t%s\t%d" % (t, label, n))
         return 0
