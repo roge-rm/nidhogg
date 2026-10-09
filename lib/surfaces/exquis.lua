@@ -9,7 +9,8 @@
 --   play, loop          PLAY, LOOP
 --   clips               the Play/Record switch
 --   slider              the output level
--- Settings, sound and the octave buttons stay the Exquis's own.
+-- Settings, sound and the octave buttons do nothing for now; the Exquis has
+-- them back when nidhogg lets it go.
 
 local surf = {name = "Exquis"}
 surf.actions = nil -- set by lib/surfaces.lua
@@ -21,13 +22,14 @@ local function sysex(...)
   return m
 end
 
--- Developer Mode zones: pads 01, encoders 02, slider 04, the other buttons
--- 20 (record, loop, clips, play, undo, redo)
-local ZONES = 0x27
+-- Developer Mode zones: all of them (pads 01, encoders 02, slider 04, up and
+-- down 08, settings and sound 10, the other buttons 20). Settings and sound
+-- are taken too, as the Exquis's own menu can't show on pads taken over and
+-- would look like a blank Exquis until closed again.
+local ZONES = 0x3F
 local BTN_RECORD, BTN_LOOP, BTN_CLIPS, BTN_PLAY = 102, 103, 104, 105
 local ENCODERS, ENC_BUTTONS = 110, 114 -- the first of 4
 local SLIDER = 80                      -- the first of 6
-local PULSE_TO_BLACK = 0x3F
 
 -- Pads 0-60 run left to right, bottom to top, in rows of 6 and 5 (the rows
 -- of 5 sit between those of 6). ROW[r] = {first pad, count}.
@@ -205,10 +207,15 @@ function surf.frame(st)
   local function set(id, r, g, b, fx) want[id] = {r, g, b, fx or 0} end
   menu_open = st.menu
   if st.saver then
-    -- the pads breathe in the bank colour, timed by the Exquis itself
-    local r, g, b = c7(st.bank[1], st.bank[2], st.bank[3])
-    for pad = 0, 60 do
-      if PLAY[pad] then set(pad, r // 4, g // 4, b // 4, PULSE_TO_BLACK) else set(pad, 0, 0, 0) end
+    -- every pad: the dragon flows up the Exquis as it crosses the norns
+    -- screen, rows along its path and columns across its wave
+    for r = 0, 10 do
+      local first, n = ROW[r][1], ROW[r][2]
+      for c = 0, n - 1 do
+        local across = c + (r % 2 == 1 and 0.5 or 0) -- 0-5
+        local cr, cg, cb = st.saver_field(4 + r * 12, 9 + across * 4.6, r / 10)
+        set(first + c, c7(math.floor(cr), math.floor(cg), math.floor(cb)))
+      end
     end
     for id = SLIDER, SLIDER + 5 do set(id, 0, 0, 0) end
     for id = ENCODERS, ENCODERS + 3 do set(id, 0, 0, 0) end

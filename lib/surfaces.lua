@@ -22,7 +22,11 @@
 --   light(i)     r, g, b of panel light i: 0 CHOMPI, 1-4 the Pitch, Start,
 --                End and Magic knobs, 5 and 6 transport, 7 PLAY, 8 LOOP,
 --                9 volume
---   saver        true while the screensaver runs; bank, its bank colour
+--   saver        true while the screensaver runs; bank, its bank colour;
+--                saver_key(k), r, g, b of key k in its animation as the
+--                OMX shows it; saver_field(x, y, along), r, g, b for a pad
+--                at (x, y) on the screen's top 128x32 and `along` (0-1) the
+--                controller, for controllers with a field of pads
 --   held         a push-hold key or K1 is down
 --   paged        a knob is off its first page
 --   record       the switch is on Record
@@ -72,6 +76,18 @@ for k = 0, 24 do
   end
 end
 S.CHOMPI_SW = 5
+
+-- CHOMPI key -> OMX-27 key, as the screensaver animation (lib/saver.lua) is
+-- drawn on the OMX's keys: the white keys are its bottom keys 12-26, the
+-- black keys its top keys 1-10
+S.KEY_OMX = {}
+do
+  local w, b = 0, 0
+  for k = 0, 24 do
+    if S.IS_BLACK[k] then S.KEY_OMX[k], b = 1 + b, b + 1
+    else S.KEY_OMX[k], w = 12 + w, w + 1 end
+  end
+end
 
 function S.connect_all()
   for _, kind in ipairs(S.kinds) do

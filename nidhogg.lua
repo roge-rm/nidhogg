@@ -320,11 +320,20 @@ local function start()
     light = rgb,
     is_black = function(k) return surfaces.IS_BLACK[k] == true end,
     saver_leds = function() return saver.leds(bank_color()) end,
+    saver_field = function(x, y, along) return saver.field(bank_color(), x, y, along) end,
   }
+  -- the screensaver as drawn on the OMX's keys, worked out once a frame
+  local saver_frame = {}
+  state.saver_key = function(k)
+    local c = saver_frame[surfaces.KEY_OMX[k]]
+    if not c then return 0, 0, 0 end
+    return math.floor(c[1]), math.floor(c[2]), math.floor(c[3])
+  end
   clock.run(function()
     while true do
       clock.sleep(1 / 15)
       state.saver = saver.active()
+      if state.saver then saver_frame = saver.leds(bank_color()) end
       state.bank = bank_color()
       state.held = k1_held
       state.paged = false
