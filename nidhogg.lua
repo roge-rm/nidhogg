@@ -344,6 +344,17 @@ local function add_params()
 
   params:add_trigger("import", "import samples")
   params:set_action("import", function() libui.open_import(modes.order[params:get("firmware")]) end)
+  params:add_trigger("update_omx", "update OMX-27")
+  params:set_action("update_omx", function()
+    -- the same update as for old firmware, offered for any OMX-27: to repair
+    -- or refresh it
+    local found = omxupdate.find()
+    if found then
+      update_prompt = {forced = true, found = found, board = found.board or "teensy40", state = "ask"}
+    else
+      update_prompt = {state = "none"}
+    end
+  end)
   params:add_trigger("library", "sample library")
   params:set_action("library", function() libui.open_library(modes.order[params:get("firmware")]) end)
 
@@ -543,7 +554,7 @@ local function update_key(n, z)
     elseif n == 2 then
       update_prompt = nil
     end
-  elseif u.state == "failed" or u.state == "done" then
+  elseif u.state == "failed" or u.state == "done" or u.state == "none" then
     update_prompt = nil
   end
 end
@@ -625,9 +636,21 @@ function redraw()
     screen.level(15)
     screen.move(64, 10)
     screen.text_center("OMX-27 firmware")
+    if u.state == "none" then
+      screen.level(8)
+      screen.move(64, 30)
+      screen.text_center("no OMX-27 plugged in")
+      screen.level(15)
+      screen.move(64, 50)
+      screen.text_center("K2 back")
+      screen.update()
+      return
+    end
     screen.level(8)
     screen.move(64, 21)
-    if u.version then
+    if u.forced then
+      screen.text_center("update to the latest release?")
+    elseif u.version then
       screen.text_center(string.format("is %d.%d.%d, needs 1.15.4", u.version[1], u.version[2], u.version[3]))
     else
       screen.text_center("didn't answer, may be too old")
