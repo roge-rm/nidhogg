@@ -135,6 +135,26 @@ local function chompi_as(btn, record, z)
   end
 end
 
+local in_settings = false -- the Exquis's own settings menu is showing
+local pressed = {}      -- pad -> the key it pressed, so it's let go of the
+                        -- same key if the layout changes while it's held
+
+local dev
+local rx = {}
+local sent = {}  -- LED id -> "r,g,b,fx" last sent
+local down = {}  -- CHOMPI key -> pads holding it
+
+function surf.match(name)
+  if name == nil then return false end
+  name = name:lower()
+  -- Developer Mode answers only on the first of its two USB ports
+  return name:find("^exquis") ~= nil and name:find("2$") == nil
+end
+
+function surf.connected() return dev ~= nil end
+
+local function send(m) if dev then dev:send(m) end end
+
 local function on_event(status, d1, d2)
   local a = surf.actions
   if status == 0x9F or status == 0x8F then
