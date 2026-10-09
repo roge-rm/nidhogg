@@ -144,6 +144,19 @@ void send_status(board::Status& last, bool& first)
         lo_send(to, "/looper", "ff", st.looper_position, st.dub_level);
     if(first || st.clock_ticks != last.clock_ticks)
         lo_send(to, "/clock", "i", int(st.clock_ticks));
+    // playheads at most 30 times a second, while any play and once when they stop
+    static double next_play      = 0;
+    static int    last_playheads = 0;
+    if(now_s() >= next_play && (st.playheads > 0 || last_playheads > 0))
+    {
+        next_play     = now_s() + 1.0 / 30;
+        lo_message m  = lo_message_new();
+        for(int i = 0; i < st.playheads; i++)
+            lo_message_add_float(m, st.playhead[i]);
+        lo_send_message(to, "/play", m);
+        lo_message_free(m);
+        last_playheads = st.playheads;
+    }
     // levels at most 20 times a second
     static double next_meter = 0;
     double        t          = now_s();

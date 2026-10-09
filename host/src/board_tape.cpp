@@ -26,6 +26,7 @@ bool  nidhogg_fx_pre_looper();
 int   nidhogg_monitor_mode();
 int   nidhogg_looper_state();
 float nidhogg_looper_position();
+int   nidhogg_playheads(float* pos, int max);
 float nidhogg_dub_level();
 bool  nidhogg_sample_recording();
 
@@ -78,6 +79,7 @@ Status status()
     st.state[8]        = nidhogg_sample_recording();
     st.looper_position = nidhogg_looper_position();
     st.dub_level       = nidhogg_dub_level();
+    st.playheads       = nidhogg_playheads(st.playhead, 8);
     return st;
 }
 

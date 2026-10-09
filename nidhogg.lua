@@ -70,7 +70,7 @@ local function reset_state()
     knob_page = {}, knob_value = {}, picked = {}, pot = {},
     menu = false, st = {}, looper_pos = 0, dub = 1, record_switch = false,
     focus = nil, focus_time = 0,
-    meter_in = 0, meter_out = 0, ticks = 0,
+    meter_in = 0, meter_out = 0, ticks = 0, playheads = {},
     omx_view = s and s.omx_view or "knobs", view_flash = nil,
   }
 end
@@ -448,6 +448,8 @@ function osc.event(path, args, from)
     s.meter_in, s.meter_out = args[1], args[2]
   elseif path == "/clock" then
     s.ticks = args[1]
+  elseif path == "/play" then
+    s.playheads = args
   elseif path == "/load" then
     load_avg, load_max = args[1], args[2]
   end

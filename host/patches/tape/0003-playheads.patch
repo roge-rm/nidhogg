@@ -1,0 +1,59 @@
+--- a/SampleReader.h
++++ b/SampleReader.h
+@@ -967,6 +967,26 @@
+         }
+ 
+ 
++#ifdef NIDHOGG_HOST
++        // Where playback is, 0-1 through the whole sample, for nidhogg's
++        // screen. A streamed file is ahead of the sound by what's buffered.
++        float HostPosition()
++        {
++            if(using_ram)
++            {
++                const size_t size = ram_buff.GetSize();
++                return size ? float(ram_buff.GetReadHead()) / size : 0.f;
++            }
++            const float head = sizeof(WAV_FormatTypeDef);
++            const float size = float(f_size(&fptr_read)) - head;
++            if(size <= 0.f)
++                return 0.f;
++            const float buffered = 2.f * read_samps.GetNumElements();
++            const float pos = float(f_tell(&fptr_read)) + (reverse_ ? buffered : -buffered) - head;
++            return pos < 0.f ? 0.f : (pos > size ? 1.f : pos / size);
++        }
++#endif
++
+         // just checks the value without doing other stuff
+         inline bool IsPlaying()
+         {
+--- a/DSPEngine.h
++++ b/DSPEngine.h
+@@ -1162,6 +1162,17 @@
+         inline bool GetLooperRecordArm() { return looper.GetRecordArm(); }
+         inline bool GetLooperIsEmpty() { return looper.GetIsEmpty(); }
+         inline float GetLooperPosition() { return looper.GetPosition(); }
++#ifdef NIDHOGG_HOST
++        // Positions of the voices that are playing, 0-1; returns how many.
++        int HostPlayheads(float* pos, int max)
++        {
++            int n = 0;
++            for(size_t i = 0; i < kMaxPoly && n < max; i++)
++                if(chompi_voice[i].IsPlaying())
++                    pos[n++] = chompi_voice[i].HostPosition();
++            return n;
++        }
++#endif
+         inline float GetLooperPitch() { return looper.GetPitch(); }
+ 
+         inline void LooperRecordButton(bool rising) { looper.RecordButton(rising); }
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -460,6 +460,7 @@
+     return engine.IsLooperPlaying() ? 4 : 5;
+ }
+ float nidhogg_looper_position() { return engine.GetLooperPosition(); }
++int nidhogg_playheads(float* pos, int max) { return engine.HostPlayheads(pos, max); }
+ float nidhogg_dub_level() { return engine.GetLooperDubGain(); }
+ bool nidhogg_sample_recording() { return engine.Recording(); }
+ // Levels for nidhogg's meters, 0-1. TAPE has no clock.

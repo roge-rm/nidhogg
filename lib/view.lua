@@ -169,6 +169,14 @@ local function omx_window(s, M)
   screen.rect(x0 - 1, 16, 1, 16)
   screen.rect(x1, 16, 1, 16)
   screen.fill()
+  -- a gap in the bar where each voice is playing
+  for _, p in ipairs(s.playheads or {}) do
+    local x = math.floor(p * 125 + 1.5)
+    screen.level(x >= x0 and x < x1 and 0 or 15)
+    screen.rect(x, 20, 1, 10)
+    screen.fill()
+  end
+  screen.level(15)
 end
 
 local function omx_beat(s, M)

@@ -54,6 +54,8 @@ struct Status
     float dub_level;
     float meter_in, meter_out; // levels, 0-1
     uint32_t clock_ticks;      // MIDI clock ticks so far, 24 a beat; 0 for TAPE
+    int   playheads;           // voices playing, up to 8
+    float playhead[8];         // where each is, 0-1 through its sample
 };
 Status status();
 
