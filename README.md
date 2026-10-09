@@ -174,7 +174,8 @@ These are in **PARAMETERS > EDIT**:
 
 - **firmware**: TAPE, TEMPO or WAVE. Each one carries on where you left it.
 - **screensaver after**: how long before the big dragon comes out.
-- **midi out to** and **midi in from**.
+- **midi out to** and **midi in from**. Notes come in on any channel, so MPE controllers play too.
+- **pressure to**: aftertouch from the **midi in** device pushes a knob up from where it's set, and lets it back when you ease off. CHOMPI has no pitch bend, so bend is ignored.
 - **tape**, **tempo** and **wave options**: CHOMPI's own settings. These take effect when you restart the norns.
 
 ## TEMPO

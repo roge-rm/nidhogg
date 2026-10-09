@@ -216,6 +216,47 @@ local SAVER_TIMES = {60, 180, 600, math.huge}
 -- another device go to Chompi as if from its USB port.
 local midi_out_dev, midi_in_dev
 
+-- MIDI in from a keyboard or an MPE controller. CHOMPI listens on one
+-- channel and has no bend or pressure, so notes on any channel are moved to
+-- its channel, and pressure can push one knob up from where it's set (back
+-- there when let go of), through CHOMPI's knob CCs 20-25.
+local PRESSURE_TO = {"off", "Pitch", "Start", "End", "Magic", "Volume"}
+local PRESSURE_KNOB = {false, 0, 1, 2, 3, 5}
+local pressure_by_ch = {} -- the latest pressure on each channel (MPE: per note)
+local pressure_base = nil -- the knob's value when pressure began
+
+local function chompi_channel()
+  local fw = modes.order[params:get("firmware")]
+  return params:get(fw .. "_midi_in_ch") - 1
+end
+
+local function pressure(ch, v)
+  local knob = PRESSURE_KNOB[params:get("pressure_to")]
+  if not knob then return end
+  pressure_by_ch[ch] = v > 0 and v or nil
+  local p = 0
+  for _, x in pairs(pressure_by_ch) do p = math.max(p, x) end
+  if p > 0 and not pressure_base then pressure_base = s.knob_value[knob] or 0 end
+  if not pressure_base then return end
+  local value = pressure_base + (p / 127) * (1 - pressure_base)
+  if p == 0 then pressure_base = nil end
+  send("/midi", {"usb", 0xB0 | chompi_channel(), 20 + knob, math.floor(value * 127 + 0.5)})
+end
+
+local function midi_in(data)
+  local status = data[1]
+  if status and status >= 0x80 and status < 0xF0 then
+    local kind, ch = status & 0xF0, status & 0x0F
+    if kind == 0xD0 then pressure(ch, data[2] or 0); return end
+    if kind == 0xA0 then pressure(ch, data[3] or 0); return end
+    if kind == 0xE0 then return end -- bend: CHOMPI has none
+    data = {kind | chompi_channel(), data[2], data[3]}
+  end
+  local msg = {"usb"}
+  for _, b in ipairs(data) do msg[#msg + 1] = b end
+  send("/midi", msg)
+end
+
 local function midi_devices()
   local names = {"none"}
   for i = 1, #midi.vports do names[#names + 1] = midi.vports[i].name end
@@ -225,7 +266,7 @@ end
 -- nidhogg's own settings, kept between runs. Chompi's options live in each
 -- card's options.json instead, as on the hardware.
 local SETTINGS_FILE = _path.data .. "nidhogg/settings.lua"
-local SAVED = {"firmware", "saver", "midi_out", "midi_in"}
+local SAVED = {"firmware", "saver", "midi_out", "midi_in", "pressure_to"}
 
 local function save_settings()
   local t = {}
@@ -255,14 +296,10 @@ local function add_params()
   params:set_action("midi_in", function(i)
     if midi_in_dev then midi_in_dev.event = nil end
     midi_in_dev = i > 1 and midi.connect(i - 1) or nil
-    if midi_in_dev then
-      midi_in_dev.event = function(data)
-        local msg = {"usb"}
-        for _, b in ipairs(data) do msg[#msg + 1] = b end
-        send("/midi", msg)
-      end
-    end
+    if midi_in_dev then midi_in_dev.event = midi_in end
   end)
+
+  params:add_option("pressure_to", "pressure to", PRESSURE_TO, 1)
 
   params:add_option("firmware", "firmware", {"TAPE", "TEMPO", "WAVE"}, 1)
   params:set_action("firmware", function(i)
