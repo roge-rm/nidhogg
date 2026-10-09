@@ -72,7 +72,7 @@ def recv_all(s, wait):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("-H", "--host", default=os.environ.get("NORNS_HOST", "10.0.0.29"))
+    ap.add_argument("-H", "--host", default=os.environ.get("NORNS_HOST", "norns.local"))
     ap.add_argument("-p", "--port", type=int, default=5555)
     ap.add_argument("-w", "--wait", type=float, default=1.0, help="seconds to collect output")
     ap.add_argument("code", nargs="?")

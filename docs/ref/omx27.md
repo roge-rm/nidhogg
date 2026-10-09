@@ -4,7 +4,7 @@ Update: nidhogg uses Quixotic7's fork (github.com/Quixotic7/OMX-27, v1.15.4 and 
 
 Notes from reading the OMX-27 repo (firmware 1.15.0, `src/config.h:24-26`, EEPROM version 38, `src/config.cpp:5`).
 
-Paths are relative to `/home/dan/Projects/norns/nidhogg-ref/omx27`. `src/` means `OMX-27-firmware/src/`, `.ino` means `OMX-27-firmware/OMX-27-firmware.ino`.
+Paths are relative to a clone of the OMX-27 firmware repo. `src/` means `OMX-27-firmware/src/`, `.ino` means `OMX-27-firmware/OMX-27-firmware.ino`.
 
 ## Short answer
 

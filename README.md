@@ -169,7 +169,7 @@ WAVE is a wavetable synth with a step sequencer.
 
 ## Credits
 
-CHOMPI is by CHOMPI Club, now part of Chase Bliss, with hardware and the original firmware by Electrosmith. The firmware is MIT licensed ([github.com/CHOMPI-Club/CHOMPI](https://github.com/CHOMPI-Club/CHOMPI)) and the copy in `third_party/chompi` keeps its licences. The CHOMPI name belongs to Chase Bliss.
+CHOMPI is by CHOMPI Club, now part of Chase Bliss, with hardware and the original firmware by Electrosmith. The firmware is MIT licensed ([github.com/CHOMPI-Club/CHOMPI](https://github.com/CHOMPI-Club/CHOMPI)) and the copy in `third_party/chompi` keeps its licences. The CHOMPI name and character are trademarks of CHOMPI Club, and nidhogg isn't an official CHOMPI release.
 
 nidhogg is MIT licensed too, see [LICENSE](LICENSE). It comes with PJRC's [teensy_loader_cli](https://github.com/PaulStoffregen/teensy_loader_cli) for updating Teensy OMX-27s, which is GPL3.
 
