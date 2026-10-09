@@ -96,7 +96,7 @@ function up.start(found, done)
     for _, l in ipairs({
       "say 'restarting the OMX-27'",
       (found.tty and ("stty -F " .. found.tty .. " 134 || true") or "true"),
-      (found.tty and "say 'writing the firmware'" or "say 'press the button on the Teensy'"),
+      (found.tty and "say 'writing the firmware'" or "say 'press the Teensy button'"),
       "sudo '" .. LOADER .. "' --mcu=" .. MCU[board] .. " -w -v " .. file .. " > /dev/null",
     }) do lines[#lines + 1] = l end
   end

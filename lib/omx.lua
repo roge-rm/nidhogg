@@ -89,8 +89,9 @@ end
 -- Finds the OMX-27, checks its firmware and, if it's new enough, puts it in
 -- REMOTE mode. Too old, or no answer, and omx.old_firmware is called instead.
 function omx.connect()
-  for i, v in pairs(midi.vports) do
-    if omx.is_omx(v.name) then
+  -- norns keeps the names of unplugged devices in its ports, without a device
+  for i, v in ipairs(midi.vports) do
+    if v.device and omx.is_omx(v.name) then
       dev = midi.connect(i)
       dev.event = on_midi
       for n = 0, 26 do leds[n] = {0, 0, 0}; shown[n] = {-1, -1, -1} end
