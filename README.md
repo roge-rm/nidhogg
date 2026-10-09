@@ -23,6 +23,7 @@ Dan
 - [Recording a sample](#recording-a-sample)
 - [The looper](#the-looper)
 - [The OMX screen](#the-omx-screen)
+- [Importing samples](#importing-samples)
 - [Settings](#settings)
 - [TEMPO](#tempo)
 - [WAVE](#wave)
@@ -42,7 +43,7 @@ The OMX-27 needs Quixotic7's firmware, 1.15.4 or newer. If it has something olde
 2. Load nidhogg from **SELECT**.
 3. The first time, it downloads CHOMPI's factory samples, installs its SuperCollider plugins and restarts SuperCollider. This takes a few minutes, then nidhogg loads by itself.
 
-The samples are in `dust/audio/nidhogg`, one folder per firmware, laid out like a CHOMPI SD card. You can add your own there through maiden.
+The samples are in `dust/audio/nidhogg`, one folder per firmware, laid out like a CHOMPI SD card. To add your own, see [Importing samples](#importing-samples).
 
 If SuperCollider won't start after you've been logged in over ssh, restart the norns.
 
@@ -129,6 +130,23 @@ The little screen shows your knobs as five bars, one per pot, with a box when a 
 |---|---|
 | <img src="docs/images/omx-knobs.png" width="384" alt="Knobs"><br>Knobs | <img src="docs/images/omx-levels.png" width="384" alt="Levels"><br>Levels, in and out |
 | <img src="docs/images/omx-window.png" width="384" alt="Sample window"><br>The sample window, between Start and End | <img src="docs/images/omx-beat.png" width="384" alt="Beat"><br>The beat and tempo, in TEMPO and WAVE |
+
+## Importing samples
+
+Plug a USB stick into the norns and the import screen comes up. You can also put files in `dust/audio/nidhogg/import` through maiden and open it from **PARAMETERS > EDIT > import samples**.
+
+1. **E2** picks a pack. Each folder of samples is a pack, and so is each folder inside a zip.
+2. **E3** picks where it goes. It starts on the first empty bank.
+3. **K3** imports. If the bank already has samples it asks first, and **K3** again replaces them.
+
+nidhogg converts the samples to CHOMPI's format, then restarts SuperCollider to load them, which takes about 20 seconds.
+
+- It reads wav, aiff, flac and ogg.
+- Up to 14 samples go in a bank, in name order. Packs made for CHOMPI keep their slots.
+- TAPE takes them into JAMMI or CUBBI banks a-e. Banks d and e are empty to start with.
+- TEMPO takes them into chromatic or slice, and cuts them at 10 seconds.
+- WAVE takes wavetables made of 2048-sample frames, like Serum's, or single cycles. They replace the tables from the one you pick onwards.
+- The stick is only read, never written to, so you can pull it out any time.
 
 ## Settings
 

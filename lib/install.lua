@@ -101,10 +101,16 @@ end
 
 -- Restarts SuperCollider so it loads new plugins and engine classes, then
 -- reloads this script into it. matron keeps running through this, so the
--- script waits for the new server and reloads itself.
-function install.restart()
+-- script waits for the new server and reloads itself. A shell command in
+-- `between` runs while SuperCollider is stopped.
+function install.restart(between)
   local script = norns.state.script
-  os.execute("sudo systemctl restart norns-sclang.service &")
+  if between then
+    os.execute("(sudo systemctl stop norns-sclang.service; " .. between
+      .. "; sudo systemctl start norns-sclang.service) > /dev/null 2>&1 &")
+  else
+    os.execute("sudo systemctl restart norns-sclang.service &")
+  end
   clock.run(function()
     -- give the old server time to go, then wait for the new one
     clock.sleep(5)
