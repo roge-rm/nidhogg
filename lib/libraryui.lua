@@ -121,30 +121,51 @@ local function taken(except)
   return t
 end
 
--- Empty banks first, in the mode the pack's files are named for (or, if
--- they aren't, the firmware that's running), then room in a bank that has
--- some, then the library.
+-- A pack named for a CHOMPI mode goes to that mode's banks: an empty one,
+-- else room in one, else it replaces one (the bank its files are named for,
+-- or the last). Other packs go to an empty bank of the running firmware, else
+-- room in one, else on WAVE the tables from table 1, else any empty bank.
+-- The library if nothing fits. A replaced bank is kept in the library.
 local function default_target(pack)
   local used = taken(pack)
   local opts = options(pack)
-  for _, want in ipairs({"replace", "add"}) do
-    for _, strict in ipairs({true, false}) do
-      for _, o in ipairs(opts) do
-        local ob = st.banks[o.bank]
-        if o.kind == want and (not strict or pack.kind or ob.fw == st.fw) then
-          local ok = true
-          local last = want == "add" and o.bank or o.bank + span(pack, ob.fw) - 1
-          for j = o.bank, last do
-            local b = st.banks[j]
-            if used[j] or (want == "replace" and b.count > 0)
-              or (strict and pack.kind and mode_of(b) ~= pack.kind) then ok = false end
-          end
-          if ok then return o end
-        end
-      end
+  local function free(o)
+    local last = o.kind == "add" and o.bank or o.bank + span(pack, st.banks[o.bank].fw) - 1
+    for j = o.bank, last do
+      if used[j] or (o.kind == "replace" and st.banks[j].count > 0) then return false end
+    end
+    return true
+  end
+  local function first(kind, test)
+    for _, o in ipairs(opts) do
+      if o.kind == kind and test(st.banks[o.bank]) and free(o) then return o end
     end
   end
-  return LIBRARY
+  if pack.kind then
+    local mine = function(b) return mode_of(b) == pack.kind end
+    local o = first("replace", mine) or first("add", mine)
+    if o then return o end
+    -- replacing: the bank the files are named for, else the last of the mode
+    local pick
+    for _, o2 in ipairs(opts) do
+      local b = st.banks[o2.bank]
+      if o2.kind == "replace" and mine(b) and not used[o2.bank] then
+        if pack.letter and b.id == pack.kind .. ":" .. pack.letter then return o2 end
+        pick = o2
+      end
+    end
+    if pick then return pick end
+  end
+  local here = function(b) return b.fw == st.fw end
+  local o = first("replace", here) or first("add", here)
+  if o then return o end
+  -- on WAVE an unnamed pack is most likely wavetables: replace from table 1
+  if st.fw == "wave" then
+    for _, o2 in ipairs(opts) do
+      if o2.kind == "replace" and st.banks[o2.bank].fw == "wave" and not used[o2.bank] then return o2 end
+    end
+  end
+  return first("replace", function() return true end) or LIBRARY
 end
 
 local function target_label(pack)

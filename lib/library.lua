@@ -145,8 +145,9 @@ local function fields(line)
 end
 
 -- Packs on the stick and in the import folder. done(packs, bad): packs
--- {name, source, files, kind, inlib}, kind being the CHOMPI mode the files
--- are named for and inlib the library pack they're already in, if any; bad
+-- {name, source, files, kind, letter, inlib}, kind and letter being the
+-- CHOMPI mode and bank the files are named for and inlib the library pack
+-- they're already in, if any; bad
 -- the zips that couldn't be read.
 function lib.scan(done)
   local roots = q(lib.DROP)
@@ -156,8 +157,10 @@ function lib.scan(done)
     for line in out:gmatch("[^\n]+") do
       local f = fields(line)
       if f[1] == "pack" then
+        local kind, letter = f[5]:match("^(%a+):?(%a?)$")
         packs[#packs + 1] = {name = f[2], source = f[3], files = {},
-          kind = f[5] ~= "-" and f[5] or nil, inlib = f[6] ~= "-" and f[6] or nil}
+          kind = f[5] ~= "-" and kind or nil, letter = letter ~= "" and letter or nil,
+          inlib = f[6] ~= "-" and f[6] or nil}
       elseif f[1] == "file" and #packs > 0 then
         table.insert(packs[#packs].files, f[2])
       elseif f[1] == "bad" then

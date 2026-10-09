@@ -84,12 +84,18 @@ def natural(name):
 
 
 def kind_of(files):
-    """jammi, cubbi, chroma or slice if most files are named for it, else "-"."""
-    kinds = [m.group(1).lower() for m in (NAMED.match(os.path.basename(f)) for f in files) if m]
+    """"jammi:b" and the like if most files are named for that mode and bank,
+    "jammi" if only for the mode, else "-"."""
+    named = [m for m in (NAMED.match(os.path.basename(f)) for f in files) if m]
+    kinds = [m.group(1).lower() for m in named]
     if not kinds:
         return "-"
     best = max(set(kinds), key=kinds.count)
-    return best if kinds.count(best) * 2 > len(files) else "-"
+    if kinds.count(best) * 2 <= len(files):
+        return "-"
+    banks = [m.group(2).lower() for m in named if m.group(1).lower() == best]
+    letter = max(set(banks), key=banks.count)
+    return "%s:%s" % (best, letter) if banks.count(letter) * 2 > len(files) else best
 
 
 def clean(name):
