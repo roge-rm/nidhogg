@@ -34,12 +34,14 @@
 --                and its white keys slots 1-15
 --   meter_in, meter_out   levels, 0-1
 --   volume       the Volume knob, 0-1
+--   knob(k), page(k)   knob k's value (0-1) and page (0 is the first)
 
 local S = {}
 
 S.kinds = {
   include("lib/surfaces/omx27"),
   include("lib/surfaces/exquis"),
+  include("lib/surfaces/launchpad"),
 }
 
 -- Set by the script. k is a CHOMPI key 0-24, z 1 down or 0 up, knob 0-5
@@ -47,6 +49,9 @@ S.kinds = {
 S.actions = {
   key = function(k, z) end,
   chompi = function(z) end,    -- the CHOMPI key
+  shift = function(z) end,     -- the CHOMPI key with the switch on Play
+  record = function(z) end,    -- the CHOMPI key with the switch on Record
+  recording = function() return false end, -- record is held
   play = function(z) end,
   loop = function(z) end,
   switch = function(on) end,   -- true for Record

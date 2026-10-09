@@ -104,36 +104,6 @@ local arrow_push = false -- both were down: Transport is pushed
 local arrow_repeat = nil -- the clock repeating a held arrow
 local slide_at = nil     -- the slider portion touched, or nil
 local undo_held = false
-local record_now = false -- the switch, as of the last frame
-local chompi_held = nil  -- gear or record, while one holds the CHOMPI key
-
--- The CHOMPI key with the switch set for it: on Play it's shift, on Record it
--- records. The switch goes back where it was when let go of. The firmware
--- takes over 30 ms to see the switch move (150 ms is safe), so the key waits
--- for it, and a quick tap still lets go after it pressed.
-local SWITCH_WAIT = 0.15
-
-local function chompi_as(btn, record, z)
-  local a = surf.actions
-  if z == 1 then
-    if chompi_held then return end
-    local was = record_now
-    local wait = was ~= record and SWITCH_WAIT or 0
-    chompi_held = {btn = btn, was = was, down_at = util.time() + wait}
-    clock.run(function()
-      if wait > 0 then a.switch(record); clock.sleep(wait) end
-      a.chompi(1)
-    end)
-  elseif chompi_held and chompi_held.btn == btn then
-    local held = chompi_held
-    chompi_held = nil
-    clock.run(function()
-      clock.sleep(math.max(0.02, held.down_at + 0.05 - util.time()))
-      a.chompi(0)
-      if held.was ~= record then clock.sleep(SWITCH_WAIT); a.switch(held.was) end
-    end)
-  end
-end
 
 local in_settings = false -- the Exquis's own settings menu is showing
 local pressed = {}      -- pad -> the key it pressed, so it's let go of the
@@ -188,9 +158,9 @@ local function on_event(status, d1, d2)
       a.touch()
       a.push(d1 - ENC_BUTTONS, z)
     elseif d1 == BTN_GEAR then
-      a.touch(); chompi_as(BTN_GEAR, false, z)
+      a.touch(); a.shift(z)
     elseif d1 == BTN_RECORD then
-      a.touch(); chompi_as(BTN_RECORD, true, z)
+      a.touch(); a.record(z)
     elseif d1 == BTN_PLAY then
       a.touch(); a.play(z)
     elseif d1 == BTN_LOOP then
@@ -266,7 +236,7 @@ function surf.connect()
       dev = midi.connect(i)
       dev.event = on_midi
       sent, down, rx, pressed, in_settings = {}, {}, {}, {}, false
-      arrows, arrow_push, slide_at, chompi_held = {}, false, nil, nil
+      arrows, arrow_push, slide_at = {}, false, nil
       send(sysex(0x00, ZONES))
       return true
     end
@@ -291,7 +261,6 @@ function surf.refresh() sent = {} end
 local function c7(r, g, b) return (r or 0) >> 1, (g or 0) >> 1, (b or 0) >> 1 end
 
 function surf.frame(st)
-  record_now = st.record
   if in_settings then return end
   local want = {} -- LED id -> {r, g, b, fx}
   local function set(id, r, g, b, fx) want[id] = {r, g, b, fx or 0} end
@@ -344,7 +313,7 @@ function surf.frame(st)
     for i = 0, 3 do set(ENCODERS + i, c7(st.light(1 + i))) end
     -- gear shows the CHOMPI light; record is red, bright while recording
     set(BTN_GEAR, c7(st.light(0)))
-    if chompi_held and chompi_held.btn == BTN_RECORD then set(BTN_RECORD, 127, 0, 0)
+    if surf.actions.recording() then set(BTN_RECORD, 127, 0, 0)
     else set(BTN_RECORD, 30, 0, 0) end
     set(BTN_PLAY, c7(st.light(7)))
     set(BTN_LOOP, c7(st.light(8)))

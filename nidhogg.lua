@@ -160,6 +160,37 @@ local function start_surfaces()
     send("/switch", {on and 1 or 0})
   end
   a.toggle_switch = function() a.switch(not s.record_switch) end
+
+  -- CHOMPI's key with the switch set for it, for controllers with separate
+  -- shift and record buttons: on Play it's shift, on Record it records. The
+  -- switch goes back where it was when let go of. The firmware takes over
+  -- 30 ms to see the switch move (150 ms is safe), so the key waits for it,
+  -- and a quick tap still lets go after it pressed.
+  local SWITCH_WAIT = 0.15
+  local chompi_hold = nil
+  local function chompi_as(record, z)
+    if z == 1 then
+      if chompi_hold then return end
+      local was = s.record_switch
+      local wait = was ~= record and SWITCH_WAIT or 0
+      chompi_hold = {record = record, was = was, down_at = util.time() + wait}
+      clock.run(function()
+        if wait > 0 then a.switch(record); clock.sleep(wait) end
+        a.chompi(1)
+      end)
+    elseif chompi_hold and chompi_hold.record == record then
+      local held = chompi_hold
+      chompi_hold = nil
+      clock.run(function()
+        clock.sleep(math.max(0.02, held.down_at + 0.05 - util.time()))
+        a.chompi(0)
+        if held.was ~= record then clock.sleep(SWITCH_WAIT); a.switch(held.was) end
+      end)
+    end
+  end
+  a.shift = function(z) chompi_as(false, z) end
+  a.record = function(z) chompi_as(true, z) end
+  a.recording = function() return chompi_hold ~= nil and chompi_hold.record end
   a.turn = function(knob, d)
     if k1_held then
       -- a push key is held: turning a knob pushes it instead
@@ -390,6 +421,8 @@ local function start()
       state.menu = s.menu
       state.meter_in, state.meter_out = s.meter_in, s.meter_out
       state.volume = s.knob_value[5] or 0
+      state.knob = function(k) return s.knob_value[k] or 0 end
+      state.page = function(k) return s.knob_page[k] or 0 end
       surfaces.frame(state)
       redraw()
     end
