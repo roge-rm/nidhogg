@@ -118,6 +118,14 @@ function surf.connect()
       dev = midi.connect(i)
       dev.event = on_midi
       sent, held, shift_held, knob_mode = {}, {}, false, false
+      -- it takes a moment to start up after being plugged in and misses
+      -- lights sent before then, so they're sent again a few times
+      clock.run(function()
+        for _, t in ipairs({1, 1, 2}) do
+          clock.sleep(t)
+          sent = {}
+        end
+      end)
       return true
     end
   end
