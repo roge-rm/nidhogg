@@ -161,6 +161,15 @@ local function start_surfaces()
   end
   a.toggle_switch = function() a.switch(not s.record_switch) end
   a.turn = function(knob, d)
+    if k1_held then
+      -- a push key is held: turning a knob pushes it instead
+      local enc = KNOB_TO_ENC[knob]
+      if not pushing[enc] then
+        pushing[enc] = true
+        send("/push", {enc, 1})
+      end
+      return
+    end
     send("/turn", {KNOB_TO_ENC[knob], d})
     focus(knob)
   end

@@ -12,8 +12,12 @@
 --                       repeats); both together push it (normal speed)
 --   slider              Volume: slide up or down; it shows the volume while
 --                       touched and the output level otherwise
--- Settings, sound, undo and redo do nothing for now; the Exquis has them back
--- when nidhogg lets it go.
+--   settings            PUSH: hold it and turn a knob (or use the arrows or
+--                       slider) to push that knob instead (next page)
+--   undo                PLAY and LOOP held together: hold it to clear the
+--                       looper (TAPE) or the sequence (WAVE)
+-- Sound and redo do nothing for now. The Exquis has every button back when
+-- nidhogg lets it go.
 
 local surf = {name = "Exquis"}
 surf.actions = nil -- set by lib/surfaces.lua
@@ -32,6 +36,7 @@ end
 local ZONES = 0x3F
 local BTN_RECORD, BTN_LOOP, BTN_CLIPS, BTN_PLAY = 102, 103, 104, 105
 local BTN_DOWN, BTN_UP = 106, 107
+local BTN_SETTINGS, BTN_UNDO = 100, 108
 local SLIDER_POS = 90    -- the touched portion, 0-5, or 127 when let go
 local TRANSPORT, VOLUME = 4, 5 -- CHOMPI's knobs
 local SLIDE_STEPS = 3   -- Volume detents per portion slid
@@ -96,6 +101,7 @@ local arrows = {}        -- down and up buttons held
 local arrow_push = false -- both were down: Transport is pushed
 local arrow_repeat = nil -- the clock repeating a held arrow
 local slide_at = nil     -- the slider portion touched, or nil
+local undo_held = false
 local in_settings = false -- the Exquis's own settings menu is showing
 local pressed = {}      -- pad -> the key it pressed, so it's let go of the
                         -- same key if the layout changes while it's held
@@ -156,6 +162,11 @@ local function on_event(status, d1, d2)
       a.touch(); a.loop(z)
     elseif d1 == BTN_CLIPS and z == 1 then
       a.touch(); a.toggle_switch()
+    elseif d1 == BTN_SETTINGS then
+      a.touch(); a.push_hold("exquis", z == 1)
+    elseif d1 == BTN_UNDO then
+      a.touch(); a.play(z); a.loop(z)
+      undo_held = z == 1
     elseif d1 == BTN_DOWN or d1 == BTN_UP then
       a.touch()
       arrows[d1] = z == 1 or nil
@@ -262,7 +273,7 @@ function surf.frame(st)
     end
     for id = SLIDER, SLIDER + 5 do set(id, 0, 0, 0) end
     for id = ENCODERS, ENCODERS + 3 do set(id, 0, 0, 0) end
-    for _, id in ipairs({BTN_RECORD, BTN_LOOP, BTN_CLIPS, BTN_PLAY}) do set(id, 0, 0, 0) end
+    for id = 100, 109 do set(id, 0, 0, 0) end
   else
     local layout = st.menu and MENU or PLAY
     for pad = 0, 60 do
@@ -299,6 +310,15 @@ function surf.frame(st)
     set(BTN_PLAY, c7(st.light(7)))
     set(BTN_LOOP, c7(st.light(8)))
     if st.record then set(BTN_CLIPS, 110, 0, 0) else set(BTN_CLIPS, 12, 12, 12) end
+    -- PUSH: white while held, amber when a knob is off its first page
+    if st.held then set(BTN_SETTINGS, 110, 110, 110)
+    elseif st.paged then set(BTN_SETTINGS, 110, 50, 0)
+    else set(BTN_SETTINGS, 10, 10, 10) end
+    if undo_held then set(BTN_UNDO, 120, 0, 0) else set(BTN_UNDO, 25, 0, 0) end
+    set(BTN_DOWN, 10, 10, 10)
+    set(BTN_UP, 10, 10, 10)
+    set(101, 0, 0, 0)
+    set(109, 0, 0, 0)
     if slide_at then
       -- the volume, in white, while the slider is touched
       local lit = math.floor((st.volume or 0) * 6 + 0.5)
