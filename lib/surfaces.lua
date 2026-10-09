@@ -33,6 +33,7 @@
 --   menu         CHOMPI's shift menu is open: its black keys are functions
 --                and its white keys slots 1-15
 --   meter_in, meter_out   levels, 0-1
+--   volume       the Volume knob, 0-1
 
 local S = {}
 

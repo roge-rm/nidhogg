@@ -343,6 +343,7 @@ local function start()
       state.record = s.record_switch
       state.menu = s.menu
       state.meter_in, state.meter_out = s.meter_in, s.meter_out
+      state.volume = s.knob_value[5] or 0
       surfaces.frame(state)
       redraw()
     end

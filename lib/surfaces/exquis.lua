@@ -8,9 +8,12 @@
 --   record button       the CHOMPI key
 --   play, loop          PLAY, LOOP
 --   clips               the Play/Record switch
---   slider              the output level
--- Settings, sound and the octave buttons do nothing for now; the Exquis has
--- them back when nidhogg lets it go.
+--   down, up            Transport a step slower or faster (held, it
+--                       repeats); both together push it (normal speed)
+--   slider              Volume: slide up or down; it shows the volume while
+--                       touched and the output level otherwise
+-- Settings, sound, undo and redo do nothing for now; the Exquis has them back
+-- when nidhogg lets it go.
 
 local surf = {name = "Exquis"}
 surf.actions = nil -- set by lib/surfaces.lua
@@ -28,6 +31,10 @@ end
 -- would look like a blank Exquis until closed again.
 local ZONES = 0x3F
 local BTN_RECORD, BTN_LOOP, BTN_CLIPS, BTN_PLAY = 102, 103, 104, 105
+local BTN_DOWN, BTN_UP = 106, 107
+local SLIDER_POS = 90    -- the touched portion, 0-5, or 127 when let go
+local TRANSPORT, VOLUME = 4, 5 -- CHOMPI's knobs
+local SLIDE_STEPS = 3   -- Volume detents per portion slid
 local ENCODERS, ENC_BUTTONS = 110, 114 -- the first of 4
 local SLIDER = 80                      -- the first of 6
 
@@ -85,6 +92,10 @@ do
 end
 
 local menu_open = false -- as of the last frame
+local arrows = {}        -- down and up buttons held
+local arrow_push = false -- both were down: Transport is pushed
+local arrow_repeat = nil -- the clock repeating a held arrow
+local slide_at = nil     -- the slider portion touched, or nil
 local in_settings = false -- the Exquis's own settings menu is showing
 local pressed = {}      -- pad -> the key it pressed, so it's let go of the
                         -- same key if the layout changes while it's held
@@ -145,6 +156,36 @@ local function on_event(status, d1, d2)
       a.touch(); a.loop(z)
     elseif d1 == BTN_CLIPS and z == 1 then
       a.touch(); a.toggle_switch()
+    elseif d1 == BTN_DOWN or d1 == BTN_UP then
+      a.touch()
+      arrows[d1] = z == 1 or nil
+      if arrow_repeat then clock.cancel(arrow_repeat); arrow_repeat = nil end
+      if arrows[BTN_DOWN] and arrows[BTN_UP] then
+        arrow_push = true
+        a.push(TRANSPORT, 1)
+      elseif z == 1 and not arrow_push then
+        local d = d1 == BTN_UP and 1 or -1
+        a.turn(TRANSPORT, d)
+        -- held: keep going after a moment
+        arrow_repeat = clock.run(function()
+          clock.sleep(0.4)
+          while true do
+            a.turn(TRANSPORT, d)
+            clock.sleep(0.08)
+          end
+        end)
+      elseif z == 0 and arrow_push then
+        arrow_push = false
+        a.push(TRANSPORT, 0)
+      end
+    elseif d1 == SLIDER_POS then
+      if d2 > 5 then
+        slide_at = nil
+      else
+        a.touch()
+        if slide_at and d2 ~= slide_at then a.turn(VOLUME, (d2 - slide_at) * SLIDE_STEPS) end
+        slide_at = d2
+      end
     end
   end
 end
@@ -179,6 +220,7 @@ function surf.connect()
       dev = midi.connect(i)
       dev.event = on_midi
       sent, down, rx, pressed, in_settings = {}, {}, {}, {}, false
+      arrows, arrow_push, slide_at = {}, false, nil
       send(sysex(0x00, ZONES))
       return true
     end
@@ -189,6 +231,7 @@ end
 function surf.lost()
   if dev then dev.event = nil end
   dev = nil
+  if arrow_repeat then clock.cancel(arrow_repeat); arrow_repeat = nil end
 end
 
 function surf.disconnect()
@@ -256,9 +299,16 @@ function surf.frame(st)
     set(BTN_PLAY, c7(st.light(7)))
     set(BTN_LOOP, c7(st.light(8)))
     if st.record then set(BTN_CLIPS, 110, 0, 0) else set(BTN_CLIPS, 12, 12, 12) end
+    if slide_at then
+      -- the volume, in white, while the slider is touched
+      local lit = math.floor((st.volume or 0) * 6 + 0.5)
+      for i = 0, 5 do
+        if i < lit then set(SLIDER + i, 90, 90, 90) else set(SLIDER + i, 4, 4, 4) end
+      end
+    end
     -- the output level, green then amber then red
     local lit = math.floor((st.meter_out or 0) * 6 + 0.5)
-    for i = 0, 5 do
+    for i = 0, slide_at and -1 or 5 do
       if i < lit then
         if i < 4 then set(SLIDER + i, 0, 90, 20) elseif i == 4 then set(SLIDER + i, 100, 70, 0) else set(SLIDER + i, 120, 0, 0) end
       else
