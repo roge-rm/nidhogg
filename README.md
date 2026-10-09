@@ -23,7 +23,7 @@ Dan
 - [Recording a sample](#recording-a-sample)
 - [The looper](#the-looper)
 - [The OMX screen](#the-omx-screen)
-- [The Exquis](#the-exquis)
+- [Other controllers](#other-controllers)
 - [Importing samples](#importing-samples)
 - [The library](#the-library)
 - [Settings](#settings)
@@ -34,7 +34,7 @@ Dan
 ## What you need
 
 - A [norns](https://monome.org/docs/norns/) or [norns shield](https://github.com/okyeron/shieldXL).
-- An OMX-27 or an Exquis plugged into the norns by USB. Any of the three OMX-27 boards works. The Exquis needs its firmware 2.1 or newer.
+- An OMX-27 plugged into the norns by USB, any of the three boards, or one of the [other controllers](#other-controllers).
 - About 200 MB free, and wifi the first time.
 
 The OMX-27 needs Quixotic7's firmware, 1.15.4 or newer. If it has something older nidhogg offers to update it: press **K3** to update or **K2** to skip. Updating clears the OMX-27's saved patterns. On a Teensy unit you may need to press the button on the Teensy when the screen asks.
@@ -133,26 +133,11 @@ The little screen shows your knobs as five bars, one per pot, with a box when a 
 | <img src="docs/images/omx-knobs.png" width="384" alt="Knobs"><br>Knobs | <img src="docs/images/omx-levels.png" width="384" alt="Levels"><br>Levels, in and out |
 | <img src="docs/images/omx-window.png" width="384" alt="Sample window"><br>The sample window, between Start and End | <img src="docs/images/omx-beat.png" width="384" alt="Beat"><br>The beat and tempo, in TEMPO and WAVE |
 
-## The Exquis
+## Other controllers
 
-![The Exquis with CHOMPI's controls on it](docs/images/exquis-play.png)
+nidhogg can also be played from these, plugged into the norns by USB. Each has its own page:
 
-The pads in the middle are CHOMPI's keyboard, C3 to C5, laid out the way the Exquis lays out notes: a semitone to the right and thirds going up. Each note is on one pad. The Cs are lit in the bank colour so you can find the octaves, the C3 octave is faintly blue and the C4 octave faintly orange.
-
-- The four knobs are **Pitch**, **Start**, **End** and **Magic**. Click one to go to its next page.
-- The slider is **Volume**. While you touch it it shows the volume, and the rest of the time the output level.
-- The arrows are **Transport**, slower and faster. Press both for normal speed.
-- **gear** is CHOMPI's shift. Hold it and the pads change to the shift menu.
-- **record** records while you hold it, whichever way the switch is.
-- **sound** is PUSH: hold it and turn a knob, the arrows or the slider to go to that knob's next page.
-- **loop** and **play** are **LOOP** and **PLAY**, and **clips** flips the Play/Record switch.
-- Hold **undo** to clear the looper in TAPE or the sequence in WAVE.
-
-<img src="docs/images/exquis-shift.png" width="360" alt="The Exquis with shift held">
-
-With shift held the pads show CHOMPI's shift menu: slots 1-15 on three rows, and the shift jobs above them in CHOMPI's groups. In TAPE those are the mode, what CHOMPI records, the FX order (pre and post) and the files on the card. TEMPO and WAVE have their own jobs in the same places.
-
-The Exquis's settings and sound menus aren't available while nidhogg is running. It gets them back when you leave nidhogg.
+- [Exquis](docs/exquis.md) by Intuitive Instruments
 
 ## Importing samples
 
