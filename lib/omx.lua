@@ -132,6 +132,9 @@ function omx.is_omx(name)
   return name:find("omx") ~= nil or name:find("teensy midi") ~= nil
 end
 
+-- true while an OMX-27 is in use
+function omx.port_open() return dev ~= nil end
+
 -- The OMX-27 was unplugged: forget it without sending anything.
 function omx.lost()
   if dev then dev.event = nil end

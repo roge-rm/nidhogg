@@ -3,14 +3,10 @@
 --
 -- TAPE, TEMPO and WAVE: pick one
 -- in PARAMS > firmware
--- OMX-27 in REMOTE mode: keys,
--- AUX = CHOMPI, encoder = transport,
--- pots = pitch start end magic volume
--- (a pot takes over once it passes
--- the knob's value)
--- K1 or the OMX's leftmost bottom key
--- held + move a pot: push that knob
--- (next page)
+-- played from an OMX-27 or an
+-- Exquis (see the README)
+-- K1 held + move a pot: push that
+-- knob (next page)
 -- K2 play, K3 loop
 -- E1 play/record switch
 -- E2 transport, E3 volume
@@ -18,7 +14,7 @@
 engine.name = "Nidhogg"
 
 local install = include("lib/install")
-local omx = include("lib/omx")
+local surfaces = include("lib/surfaces")
 local view = include("lib/view")
 local saver = include("lib/saver")
 local options = include("lib/options")
@@ -35,18 +31,6 @@ local detent
 local SW = {PLAY = 33, LOOP = 34}
 local ENC = {TRANSPORT = 4, VOLUME = 5} -- hardware encoders SW5, SW6
 
--- OMX-27 key -> Chompi switch id (Hardware::SwId). Bottom keys 12-26 are
--- Chompi's white keys C3-C5, top keys 1-10 its black keys, AUX the CHOMPI key.
-local OMX_TO_SW = {
-  [0] = 5,
-  [1] = 7, [2] = 12, [3] = 13, [4] = 14, [5] = 21,
-  [6] = 22, [7] = 23, [8] = 29, [9] = 30, [10] = 31,
-  [12] = 15, [13] = 8, [14] = 9, [15] = 10, [16] = 11, [17] = 16, [18] = 17,
-  [19] = 18, [20] = 19, [21] = 20, [22] = 24, [23] = 25, [24] = 26, [25] = 27,
-  [26] = 28,
-}
--- OMX pot -> Chompi knob: Pitch 0, Start 1, End 2, Magic 3, Volume 5
-local POT_TO_KNOB = {[0] = 0, 1, 2, 3, 5}
 local pot_anchor = {} -- pot position when it last woke the screensaver, by knob
 -- Chompi knob -> hardware encoder, for pushes:
 -- Pitch SW4, Start SW1, End SW2, Magic SW3, Transport SW5, Volume SW6
@@ -84,10 +68,10 @@ local function bank_color()
   return BANK_COLORS[bank] or BANK_COLORS[0]
 end
 
--- K1 or OMX key 11 held: moving a pot pushes its knob instead of turning it.
--- The push is released with the key, since Chompi acts on the release.
-local OMX_PUSH_KEY = 11
-local push_holds = {} -- which of K1 and the OMX key are down
+-- K1 or a controller's push key held: moving a pot pushes its knob instead
+-- of turning it. The push is released with the key, since Chompi acts on the
+-- release.
+local push_holds = {} -- which of K1 and the push keys are down
 local k1_held = false -- either is held
 local pot_from = {} -- pot position when the hold began, by knob
 local pushing = {}  -- encoders pushed during this hold
@@ -138,14 +122,6 @@ local function focus(knob)
   s.focus_time = util.time()
 end
 
--- OMX-27 key that shows each Chompi key light: AUX shows the CHOMPI light.
-local function omx_led_source(n)
-  if n == 0 then return 0 end -- panel light 0
-  if n >= 1 and n <= 10 then return 10 + (n - 1) end -- black keys: lights 0-9
-  if n >= 12 then return 10 + (25 - (n - 11)) end -- white keys: lights 24-10
-  return nil
-end
-
 -- Sticky points: a pot holds its knob exactly on a detent across a small
 -- zone around it, and the rest of the travel stretches to still reach 0 and 1.
 local DETENT_ZONE = 0.035
@@ -171,31 +147,27 @@ detent = function(knob, pos)
   return 1
 end
 
-local function start_omx()
-  omx.key = function(n, ev)
-    saver.touch()
-    if n == OMX_PUSH_KEY then
-      if ev == "down" then push_hold("omx", true)
-      elseif ev == "up" then push_hold("omx", false) end
-      return
-    end
-    local sw = OMX_TO_SW[n]
-    if not sw then return end
-    if ev == "down" then send("/key", {sw, 1})
-    elseif ev == "up" then send("/key", {sw, 0}) end
+-- What's played on any controller (lib/surfaces.lua).
+local function start_surfaces()
+  local a = surfaces.actions
+  a.touch = function() saver.touch() end
+  a.key = function(k, z) send("/key", {surfaces.KEY_SW[k], z}) end
+  a.chompi = function(z) send("/key", {surfaces.CHOMPI_SW, z}) end
+  a.play = function(z) send("/key", {SW.PLAY, z}) end
+  a.loop = function(z) send("/key", {SW.LOOP, z}) end
+  a.switch = function(on)
+    s.record_switch = on
+    send("/switch", {on and 1 or 0})
   end
-  omx.enc = function(d)
-    saver.touch()
-    send("/turn", {ENC.TRANSPORT, d})
-    focus(4)
+  a.toggle_switch = function() a.switch(not s.record_switch) end
+  a.turn = function(knob, d)
+    send("/turn", {KNOB_TO_ENC[knob], d})
+    focus(knob)
   end
-  omx.enc_btn = function(z)
-    saver.touch()
-    send("/push", {ENC.TRANSPORT, z})
-  end
-  omx.pot = function(n, v, hires)
-    local knob = POT_TO_KNOB[n]
-    local pos = detent(knob, hires / 16383)
+  a.push = function(knob, z) send("/push", {KNOB_TO_ENC[knob], z}) end
+  a.push_hold = function(who, held) push_hold(who, held) end
+  a.pot = function(knob, raw)
+    local pos = detent(knob, raw)
     -- a jittering pot shouldn't keep the screensaver away: only count it once
     -- it has moved 1% from where it last counted
     if not pot_anchor[knob] or math.abs(pos - pot_anchor[knob]) > 0.01 then
@@ -215,24 +187,17 @@ local function start_omx()
     send("/pot", {knob, pos})
     focus(knob)
   end
-  omx.old_firmware = function(version)
+  surfaces.kinds[1].old_firmware = function(version)
     local found = omxupdate.find() or {}
     update_prompt = {version = version, found = found, board = found.board or "teensy40", state = "ask"}
   end
-  omx.connect()
+  surfaces.connect_all()
 
   -- plugged in later, or unplugged and plugged back in
-  midi.add = function(dev)
-    if omx.is_omx(dev.name) then
-      clock.run(function()
-        clock.sleep(0.5) -- let norns finish setting the port up
-        omx.connect()
-      end)
-    end
-  end
+  midi.add = function(dev) surfaces.added(dev) end
   -- norns also calls this again with no device, through the device's metatable
   midi.remove = function(dev)
-    if dev and omx.is_omx(dev.name) then omx.lost() end
+    if dev then surfaces.removed(dev) end
   end
 end
 
@@ -322,7 +287,7 @@ end
 switch_firmware = function(fw)
   M = modes[fw]
   reset_state()
-  omx.screen_refresh()
+  surfaces.refresh()
   engine.start(fw)
   send("/switch", {0})
   clock.run(function()
@@ -335,7 +300,7 @@ end
 local function start()
   M = modes[modes.order[params:get("firmware")]]
   engine.start(modes.order[params:get("firmware")])
-  start_omx()
+  start_surfaces()
   library.watch(function() libui.open_import(modes.order[params:get("firmware")]) end, libui.removed)
   local notice = library.take_notice()
   if notice then libui.notice(notice) end
@@ -345,32 +310,31 @@ local function start()
     clock.sleep(0.5)
     send("/hello", {})
   end)
+  -- what the controllers show, 15 times a second
+  local function rgb(i)
+    local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
+    return r or 0, g or 0, b or 0
+  end
+  local state = {
+    key = function(k) return rgb(surfaces.KEY_LED[k]) end,
+    light = rgb,
+    is_black = function(k) return surfaces.IS_BLACK[k] == true end,
+    saver_leds = function() return saver.leds(bank_color()) end,
+  }
   clock.run(function()
     while true do
       clock.sleep(1 / 15)
-      if saver.active() then
-        for n, c in pairs(saver.leds(bank_color())) do
-          omx.led(n, math.floor(c[1]), math.floor(c[2]), math.floor(c[3]))
-        end
-      else
-        for n = 0, 26 do
-          local i = omx_led_source(n)
-          if i then
-            local r, g, b = leds:byte(i * 3 + 1, i * 3 + 3)
-            omx.led(n, r or 0, g or 0, b or 0)
-          end
-        end
-        -- the push key: white while held, amber when a knob is off its first
-        -- page, else dim
-        local paged = false
-        for k = 0, 5 do
-          if (s.knob_page[k] or 0) > 0 then paged = true end
-        end
-        if k1_held then omx.led(OMX_PUSH_KEY, 255, 255, 255)
-        elseif paged then omx.led(OMX_PUSH_KEY, 255, 120, 0)
-        else omx.led(OMX_PUSH_KEY, 24, 24, 24) end
+      state.saver = saver.active()
+      state.bank = bank_color()
+      state.held = k1_held
+      state.paged = false
+      for k = 0, 5 do
+        if (s.knob_page[k] or 0) > 0 then state.paged = true end
       end
-      omx.led_show()
+      state.record = s.record_switch
+      state.menu = s.menu
+      state.meter_in, state.meter_out = s.meter_in, s.meter_out
+      surfaces.frame(state)
       redraw()
     end
   end)
@@ -417,7 +381,7 @@ function init()
 end
 
 function cleanup()
-  omx.disconnect()
+  surfaces.disconnect()
   library.unmount()
 end
 
@@ -597,17 +561,22 @@ function redraw()
     return
   end
 
-  -- The OMX-27 frame is drawn first and copied off with screen.peek; only
-  -- what's drawn after the second clear reaches the norns screen.
+  -- A controller's screen (the OMX-27's) is drawn first and copied off with
+  -- screen.peek; only what's drawn after the clear reaches the norns screen.
+  local small = surfaces.wants_screen()
   if saver.active() then
-    saver.draw()
-    omx.screen_send(0, 0)
-    screen.clear()
+    if small then
+      saver.draw()
+      surfaces.screen_send(0, 0)
+      screen.clear()
+    end
     saver.draw()
   else
-    view.omx(s, M)
-    omx.screen_send(0, 0)
-    screen.clear()
+    if small then
+      view.omx(s, M)
+      surfaces.screen_send(0, 0)
+      screen.clear()
+    end
     local left = saver.remaining()
     local sleepy = left < 20 and util.clamp(1 - left / 20, 0, 1) or 0
     view.norns(s, M, leds, sleepy)
