@@ -168,8 +168,9 @@ function lib.scan(done)
   end)
 end
 
--- fw's banks and what the library has for them. done(banks, items, samples):
--- banks {id, label, loaded, count, slots}, loaded being the item in it (nil
+-- fw's banks and what the library has for them, or every firmware's banks
+-- for fw "all". done(banks, items, samples):
+-- banks {id, label, loaded, count, fw, slots}, loaded being the item in it (nil
 -- if it isn't from the library) and slots {[n] = name}; items {id, label}
 -- are whole packs, samples {id, label} single files.
 function lib.banks(fw, done)
@@ -179,7 +180,7 @@ function lib.banks(fw, done)
       local f = fields(line)
       if f[1] == "bank" then
         banks[#banks + 1] = {id = f[2], label = f[3], loaded = f[4] ~= "-" and f[4] or nil,
-          count = tonumber(f[5]), slots = {}}
+          count = tonumber(f[5]), fw = f[6], slots = {}}
       elseif f[1] == "slot" and #banks > 0 then
         banks[#banks].slots[tonumber(f[3])] = f[4]
       elseif f[1] == "item" then
@@ -192,7 +193,7 @@ function lib.banks(fw, done)
   end)
 end
 
--- Runs jobs: {"import", pack, target, files}, {"load", item, bank} or
+-- Runs jobs: {"import", pack, target, files, kind}, {"load", item, bank} or
 -- {"slot", sample, bank, n}.
 -- done(ok) once the files are in place; the restart is up to the caller.
 function lib.start(fw, jobs, done)
@@ -200,7 +201,7 @@ function lib.start(fw, jobs, done)
   for _, j in ipairs(jobs) do
     if j[1] == "import" then
       lines[#lines + 1] = table.concat({"import", j[2].source, j[3], table.concat(j[4], "|"), j[2].name,
-        j[2].tables and "tables" or "samples"}, "\t")
+        j[5]}, "\t")
     else
       lines[#lines + 1] = table.concat(j, "\t")
     end
@@ -227,8 +228,8 @@ end
 
 -- The command that resets the changed banks' presets, run while the
 -- firmware is stopped.
-function lib.presets_cmd(fw)
-  return string.format("python3 %s presets %s %s %s", q(PY), fw, q(CARDS), q(WORK .. "/slots"))
+function lib.presets_cmd()
+  return string.format("python3 %s presets %s %s", q(PY), q(CARDS), q(WORK .. "/slots"))
 end
 
 -- A message to show when nidhogg is back after the restart.

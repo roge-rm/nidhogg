@@ -41,7 +41,7 @@ local function finish(fw, changed_banks, lines)
   if changed_banks then
     lib.set_notice(lines)
     st = {mode = "notice", lines = {lines[1], "restarting to load them"}, waiting = true}
-    install.restart(lib.presets_cmd(fw))
+    install.restart(lib.presets_cmd())
   else
     st = {mode = "notice", lines = lines}
   end
@@ -56,7 +56,7 @@ local function picked(pack)
 end
 
 -- banks a pack needs: one per 14 samples, or one per table for WAVE
-local function span(fw, pack)
+local function span(pack, fw)
   local n = picked(pack)
   if fw == "wave" then return math.max(1, n) end
   return math.max(1, math.ceil(n / SLOTS))
@@ -69,16 +69,18 @@ local function mode_of(bank) return bank.id:match("^(%a+)") end
 -- {kind = "add", bank = i} (into that bank's empty slots).
 local LIBRARY = {kind = "library"}
 
+-- Every firmware's banks are offered. WAVE's tables only take packs that
+-- aren't named for TAPE or TEMPO.
 local function options(pack)
   local out = {LIBRARY}
-  -- samples can't go in WAVE's tables
-  if st.fw == "wave" and not pack.tables then return out end
-  local need, n = span(st.fw, pack), picked(pack)
+  local n = picked(pack)
   for i, b in ipairs(st.banks) do
-    local last = st.banks[i + need - 1]
-    if last and mode_of(last) == mode_of(b) then out[#out + 1] = {kind = "replace", bank = i} end
-    if st.fw ~= "wave" and b.count > 0 and SLOTS - b.count >= n then
-      out[#out + 1] = {kind = "add", bank = i}
+    if b.fw ~= "wave" or not pack.kind then
+      local last = st.banks[i + span(pack, b.fw) - 1]
+      if last and mode_of(last) == mode_of(b) then out[#out + 1] = {kind = "replace", bank = i} end
+      if b.fw ~= "wave" and b.count > 0 and SLOTS - b.count >= n then
+        out[#out + 1] = {kind = "add", bank = i}
+      end
     end
   end
   return out
@@ -91,25 +93,27 @@ local function taken(except)
   local t = {}
   for _, p in ipairs(st.packs) do
     if p ~= except and p.tick and p.target.bank then
-      local last = p.target.kind == "add" and p.target.bank or p.target.bank + span(st.fw, p) - 1
+      local last = p.target.kind == "add" and p.target.bank
+        or p.target.bank + span(p, st.banks[p.target.bank].fw) - 1
       for i = p.target.bank, last do t[i] = true end
     end
   end
   return t
 end
 
--- Empty banks first, in the mode the pack's files are named for, then room
--- in a bank that has some, then the library.
+-- Empty banks first, in the mode the pack's files are named for (or, if
+-- they aren't, the firmware that's running), then room in a bank that has
+-- some, then the library.
 local function default_target(pack)
   local used = taken(pack)
-  local need = span(st.fw, pack)
   local opts = options(pack)
   for _, want in ipairs({"replace", "add"}) do
     for _, strict in ipairs({true, false}) do
       for _, o in ipairs(opts) do
-        if o.kind == want then
+        local ob = st.banks[o.bank]
+        if o.kind == want and (not strict or pack.kind or ob.fw == st.fw) then
           local ok = true
-          local last = want == "add" and o.bank or o.bank + need - 1
+          local last = want == "add" and o.bank or o.bank + span(pack, ob.fw) - 1
           for j = o.bank, last do
             local b = st.banks[j]
             if used[j] or (want == "replace" and b.count > 0)
@@ -128,7 +132,7 @@ local function target_label(pack)
   if t.kind == "library" then return "library" end
   local a = st.banks[t.bank]
   if t.kind == "add" then return "+ " .. a.label end
-  local n = span(st.fw, pack)
+  local n = span(pack, a.fw)
   if n == 1 then return a.label end
   local b = st.banks[math.min(#st.banks, t.bank + n - 1)]
   return a.label .. "-" .. (b.label:match("(%S+)$"))
@@ -140,7 +144,7 @@ function ui.open_import(fw)
   st = {mode = "import", fw = fw, state = "scanning", cursor = 1, top = 1}
   lib.scan(function(packs, bad)
     if not st or st.mode ~= "import" then return end
-    lib.banks(fw, function(banks)
+    lib.banks("all", function(banks)
       if not st or st.mode ~= "import" then return end
       st.banks, st.bad = banks, bad
       st.packs = packs
@@ -167,7 +171,7 @@ local function replacing()
   local out = {}
   for _, p in ipairs(ticked()) do
     if p.target.kind == "replace" then
-      for i = p.target.bank, math.min(#st.banks, p.target.bank + span(st.fw, p) - 1) do
+      for i = p.target.bank, math.min(#st.banks, p.target.bank + span(p, st.banks[p.target.bank].fw) - 1) do
         if st.banks[i].count > 0 then out[#out + 1] = st.banks[i].label end
       end
     end
@@ -181,10 +185,13 @@ local function do_import()
     local files = {}
     for _, f in ipairs(p.files) do if p.on[f] then files[#files + 1] = f end end
     local t = p.target
+    local b = st.banks[t.bank or 0]
     local target = t.kind == "library" and "library"
-      or ((t.kind == "add" and "add:" or "") .. st.banks[t.bank].id)
+      or ((t.kind == "add" and "add:" or "") .. b.fw .. "/" .. b.id)
     any_bank = any_bank or t.kind ~= "library"
-    jobs[#jobs + 1] = {"import", p, target, files}
+    -- converted as wavetables for WAVE's tables, as samples for the rest
+    local tables = (b and b.fw == "wave") or (not b and p.tables)
+    jobs[#jobs + 1] = {"import", p, target, files, tables and "tables" or "samples"}
   end
   st.state = "working"
   local fw = st.fw

@@ -20,20 +20,21 @@ Commands (all write TSV lines on stdout):
       "file<TAB>name" for each of its files; "bad<TAB>zip" for zips that
       can't be read.
   banks FW CARDS
-      "bank<TAB>id<TAB>label<TAB>loaded<TAB>count" for each of FW's banks,
+      "bank<TAB>id<TAB>label<TAB>loaded<TAB>count<TAB>fw" for each of FW's
+      banks (FW "all" for every firmware's, and nothing else),
       each followed by "slot<TAB>bank<TAB>n<TAB>name" for its samples; then
       "item<TAB>id<TAB>label" for each library item that fits them and
       "sample<TAB>path<TAB>label" for each single library file.
   run FW CARDS JOBS STATUS SLOTS
       JOBS lines: "import<TAB>source<TAB>target<TAB>file|file...<TAB>name<TAB>kind"
       converts a pack into the library as name, as samples or tables (kind)
-      and, unless target is "library", loads it there;
-      target "add:<bank>" puts it in that bank's empty slots instead;
+      and, unless target is "library", loads it into "<fw>/<bank>", or into
+      that bank's empty slots for "add:<fw>/<bank>";
       "load<TAB>item<TAB>bank" loads a library item into a bank, replacing
       it; "slot<TAB>path<TAB>bank<TAB>n" puts one library file in slot n. Progress
       goes to STATUS and the card slots changed to SLOTS.
-  presets FW CARDS SLOTS
-      Resets the presets of those slots. Only while the firmware is stopped,
+  presets CARDS SLOTS
+      Resets the presets of the slots listed, on each firmware's card. Only while the firmware is stopped,
       as it keeps presets in memory and writes them back.
 
 Card formats (docs/ref):
@@ -103,6 +104,26 @@ def fingerprint(name, size, crc=""):
     return "%s|%d|%s" % (os.path.basename(name).lower(), size, crc)
 
 
+def split_named(name, source, files):
+    """A folder whose files are named for more than one CHOMPI bank (a whole
+    card, say) becomes one pack per bank, each keeping its slots."""
+    groups, rest = {}, []
+    for f in files:
+        m = NAMED.match(f[0])
+        if m:
+            groups.setdefault((m.group(1).lower(), m.group(2).lower()), []).append(f)
+        else:
+            rest.append(f)
+    if len(groups) < 2:
+        return [(name, source, files)]
+    out = []
+    for (mode, bank), fs in sorted(groups.items()):
+        out.append(("%s/%s %s" % (name, mode.upper(), bank), source, fs))
+    if rest:
+        out.append((name, source, rest))
+    return out
+
+
 def scan_root(root):
     """[(name, source, [(file, fingerprint)])]"""
     packs = []
@@ -115,8 +136,8 @@ def scan_root(root):
         audio = sorted((f for f in files if is_audio(f)), key=natural)
         if audio:
             name = "loose files" if rel == "." else rel
-            packs.append((name, d, [(f, fingerprint(f, os.path.getsize(os.path.join(d, f))))
-                                    for f in audio]))
+            packs += split_named(name, d, [(f, fingerprint(f, os.path.getsize(os.path.join(d, f))))
+                                           for f in audio])
         for f in sorted(files, key=natural):
             if f.lower().endswith(".zip") and not f.startswith("."):
                 packs += scan_zip(os.path.join(d, f))
@@ -139,12 +160,13 @@ def scan_zip(path):
     zname = os.path.splitext(os.path.basename(path))[0]
     out = []
     for folder in sorted(folders, key=natural):
-        # drop a folder named like the zip, as most zips have one
+        # drop the zip's name when the folder inside is named like it, as most
+        # zips have one (Google Drive adds a date to the zip's name)
         parts = [zname] + [x for x in folder.split("/") if x]
-        if len(parts) > 1 and parts[1] == zname:
-            parts.pop(1)
-        out.append(("/".join(parts), path + "::" + folder,
-                    sorted(folders[folder], key=lambda f: natural(f[0]))))
+        if len(parts) > 1 and zname.startswith(parts[1]):
+            parts.pop(0)
+        out += split_named("/".join(parts), path + "::" + folder,
+                           sorted(folders[folder], key=lambda f: natural(f[0])))
     return out
 
 
@@ -624,36 +646,41 @@ def run(fw, cards, jobs_file, status, slots_out):
             with open(os.path.join(lib_dir(cards), kind, pack, "source.tsv"), "w") as f:
                 for name in made:
                     f.write("%s\t%s\n" % (name, fps.get(name, fingerprint(name, 0))))
-            if target.startswith("add:"):
+            if target == "library":
+                continue
+            # "<fw>/<bank>", or "add:<fw>/<bank>" for its empty slots
+            add = target.startswith("add:")
+            tfw, bank = target[4 if add else 0:].split("/", 1)
+            first_run(tfw, cards, db)
+            if add:
                 folder = os.path.join(lib_dir(cards), kind, pack)
                 files = [os.path.join(folder, f) for f in pack_wavs(folder)]
-                bank = target[4:]
-                changed.append((bank, add_files(fw, cards, db, files, bank, say)))
-            elif target != "library":
-                its = [i for i, _ in items(fw, cards) if i.split("#")[0].split("@")[0] == pack]
-                banks = bank_ids(fw)
-                start = banks.index(target)
+                changed.append((tfw, bank, add_files(tfw, cards, db, files, bank, say)))
+            else:
+                its = [i for i, _ in items(tfw, cards) if re.split(r"[#@]", i)[0] == pack]
+                banks = bank_ids(tfw)
+                start = banks.index(bank)
                 for i, item in enumerate(its):
                     if start + i >= len(banks):
                         break
-                    bank = banks[start + i]
-                    changed.append((bank, load_item(fw, cards, db, item, bank, say)))
+                    b = banks[start + i]
+                    changed.append((tfw, b, load_item(tfw, cards, db, item, b, say)))
         elif job[0] == "load":
             _, item, bank = job
-            changed.append((bank, load_item(fw, cards, db, item, bank, say)))
+            changed.append((fw, bank, load_item(fw, cards, db, item, bank, say)))
         elif job[0] == "slot":
             _, rel, bank, slot = job
             kind = "tables" if fw == "wave" else "samples"
             f = os.path.join(lib_dir(cards), kind, rel)
-            changed.append((bank, set_slot(fw, cards, db, f, bank, int(slot), say)))
+            changed.append((fw, bank, set_slot(fw, cards, db, f, bank, int(slot), say)))
     save_json(os.path.join(lib_dir(cards), "banks.json"), db)
     with open(slots_out, "w") as f:
-        for bank, slots in changed:
-            f.write("%s\t%s\n" % (bank, " ".join(str(s) for s in slots)))
+        for cfw, bank, slots in changed:
+            f.write("%s\t%s\t%s\n" % (cfw, bank, " ".join(str(s) for s in slots)))
     msg = []
     if imported:
         msg.append("imported %d" % imported)
-    banks_changed = len({b for b, _ in changed})
+    banks_changed = len({(f, b) for f, b, _ in changed})
     if banks_changed:
         msg.append("changed %d bank%s" % (banks_changed, "" if banks_changed == 1 else "s"))
     if failed:
@@ -673,33 +700,35 @@ def scan_fingerprints(source):
             for f in os.listdir(source) if is_audio(f)]
 
 
-def reset_presets(fw, cards, slots_file):
-    if fw == "wave":
-        return 0
-    changed = []
+def reset_presets(cards, slots_file):
+    """Resets the presets of the slots listed, for each firmware's card."""
+    by_fw = {}
     with open(slots_file) as f:
         for line in f:
-            bank, _, slots = line.rstrip("\n").partition("\t")
-            changed.append((bank, [int(s) for s in slots.split()]))
-    path = os.path.join(card(cards, fw), "presets.json")
-    p = load_json(path, None)
-    if p is None:
-        return 0
-    for bank, slots in changed:
-        if fw == "tape":
-            mode, b = bank.split(":")
-            rows = p[0][("jammi", "cubbi").index(mode)][TAPE_BANKS.index(b)]
-            default = TAPE_PRESET
-        else:
-            rows = p[("chroma", "slice").index(bank)]
-            default = TEMPO_PRESET
-        # the old settings don't fit the new samples
-        for s in slots:
-            rows[s - 1] = list(default)
-    tmp = path + ".part"
-    with open(tmp, "w") as f:
-        json.dump(p, f, separators=(",", ":"))
-    os.replace(tmp, path)
+            fw, bank, slots = (line.rstrip("\n").split("\t") + [""])[:3]
+            by_fw.setdefault(fw, []).append((bank, [int(s) for s in slots.split()]))
+    for fw, changed in by_fw.items():
+        if fw == "wave":
+            continue
+        path = os.path.join(card(cards, fw), "presets.json")
+        p = load_json(path, None)
+        if p is None:
+            continue
+        for bank, slots in changed:
+            if fw == "tape":
+                mode, b = bank.split(":")
+                rows = p[0][("jammi", "cubbi").index(mode)][TAPE_BANKS.index(b)]
+                default = TAPE_PRESET
+            else:
+                rows = p[("chroma", "slice").index(bank)]
+                default = TEMPO_PRESET
+            # the old settings don't fit the new samples
+            for s in slots:
+                rows[s - 1] = list(default)
+        tmp = path + ".part"
+        with open(tmp, "w") as f:
+            json.dump(p, f, separators=(",", ":"))
+        os.replace(tmp, path)
     return 0
 
 
@@ -721,15 +750,19 @@ def main(argv):
         return 0
     if cmd == "banks":
         fw, cards = argv[2], argv[3]
+        fws = ["tape", "tempo", "wave"] if fw == "all" else [fw]
         db = banks_db(cards)
-        if first_run(fw, cards, db):
+        if any([first_run(f, cards, db) for f in fws]):
             save_json(os.path.join(lib_dir(cards), "banks.json"), db)
-        for bank in bank_ids(fw):
-            item = loaded(fw, cards, db, bank)
-            n = len(bank_state(fw, cards, bank))
-            print("bank\t%s\t%s\t%s\t%d" % (bank, bank_label(bank), item or "-", n))
-            for slot, name in sorted(slot_names(fw, cards, db, bank).items()):
-                print("slot\t%s\t%d\t%s" % (bank, slot, name))
+        for f in fws:
+            for bank in bank_ids(f):
+                item = loaded(f, cards, db, bank)
+                n = len(bank_state(f, cards, bank))
+                print("bank\t%s\t%s\t%s\t%d\t%s" % (bank, bank_label(bank), item or "-", n, f))
+                for slot, name in sorted(slot_names(f, cards, db, bank).items()):
+                    print("slot\t%s\t%d\t%s" % (bank, slot, name))
+        if fw == "all":
+            return 0
         for item, label in items(fw, cards):
             print("item\t%s\t%s" % (item, label))
         for rel, label in lib_samples(fw, cards):
@@ -738,7 +771,7 @@ def main(argv):
     if cmd == "run":
         return run(*argv[2:7])
     if cmd == "presets":
-        return reset_presets(*argv[2:5])
+        return reset_presets(argv[2], argv[3])
     return 2
 
 
