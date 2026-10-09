@@ -32,28 +32,7 @@ end
 
 -- Seconds until the screensaver starts, for the mascot to get sleepy.
 function saver.remaining()
-  -- The screensaver for a field of pads, one point at a time: (x, y) is where
--- the pad stands on the norns screen's top 128x32, and `along` (0-1) how far
--- it is along the controller, for a faint wave of the bank colour that rolls
--- slowly along it and fades through the gaps. The dragon's body glows over
--- that as it passes, brightest at the head. Returns r, g, b.
-function saver.field(color, x, y, along)
-  local wave = 0.5 + 0.5 * math.sin(util.time() * 2 * math.pi / 7 - along * 2 * math.pi)
-  local v = (0.025 + 0.045 * wave) * top_keys_level()
-  local t = pass_time()
-  if t then
-    for i = 0, SEGMENTS, 2 do
-      local px, py = point(t, i)
-      -- the body is long and thin: a pad sees it from further along than across
-      local dx, dy = (px - x) / 11, (py - y) / 5
-      local d = math.sqrt(dx * dx + dy * dy)
-      if d < 1 then v = math.max(v, 0.6 * (1 - d) * (1 - i / (SEGMENTS + 1))) end
-    end
-  end
-  return color[1] * v, color[2] * v, color[3] * v
-end
-
-return saver.delay - (util.time() - last_input)
+  return saver.delay - (util.time() - last_input)
 end
 
 -- Time since the current pass began, rolling over to a new pass once the
@@ -305,6 +284,27 @@ function saver.leds(color)
     out[n] = {color[1] * glow, color[2] * glow, color[3] * glow}
   end
   return out
+end
+
+-- The screensaver for a field of pads, one point at a time: (x, y) is where
+-- the pad stands on the norns screen's top 128x32, and `along` (0-1) how far
+-- it is along the controller, for a faint wave of the bank colour that rolls
+-- slowly along it and fades through the gaps. The dragon's body glows over
+-- that as it passes, brightest at the head. Returns r, g, b.
+function saver.field(color, x, y, along)
+  local wave = 0.5 + 0.5 * math.sin(util.time() * 2 * math.pi / 7 - along * 2 * math.pi)
+  local v = (0.025 + 0.045 * wave) * top_keys_level()
+  local t = pass_time()
+  if t then
+    for i = 0, SEGMENTS, 2 do
+      local px, py = point(t, i)
+      -- the body is long and thin: a pad sees it from further along than across
+      local dx, dy = (px - x) / 11, (py - y) / 5
+      local d = math.sqrt(dx * dx + dy * dy)
+      if d < 1 then v = math.max(v, 0.6 * (1 - d) * (1 - i / (SEGMENTS + 1))) end
+    end
+  end
+  return color[1] * v, color[2] * v, color[3] * v
 end
 
 return saver
