@@ -206,13 +206,13 @@ local function c7(r, g, b) return (r or 0) >> 1, (g or 0) >> 1, (b or 0) >> 1 en
 local function scale(c, k) return math.floor(c[1] * k), math.floor(c[2] * k), math.floor(c[3] * k) end
 
 -- A nudge row: a faint track in the knob's colour, the pad nearest its value
--- bright, and for Pitch its middle marked.
+-- bright, and for Pitch its middle a little brighter than the track.
 local function knob_row(set, first_led, value, color, middle)
   local at = util.clamp(math.floor(value * 8) + 1, 1, 8)
   for col = 1, 8 do
     local led = first_led + col - 1
     if col == at then set(led, scale(color, 1))
-    elseif middle and (col == 4 or col == 5) then set(led, 14, 14, 14)
+    elseif middle and (col == 4 or col == 5) then set(led, scale(color, 0.35))
     else set(led, scale(color, 0.12)) end
   end
 end
