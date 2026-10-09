@@ -37,6 +37,8 @@ local LOOPER = {[0] = "empty", "armed", "recording", "overdub", "playing", "paus
 
 modes.tape = {
   name = "TAPE",
+  -- sticky points for the pots, by knob and page: 1x reverse and forward speed
+  detents = {[0] = {[0] = {0.17, 0.83}}},
   knob_icons = {[0] = {"note", "gain"}, {"start", "attack"}, {"end", "release"}, {"magic", "wave", "filter"}, {"reels"}, {"volume", "mic"}},
   title = function(s)
     local slot = s.st[4] == 15 and "RAM" or tostring(s.st[4] or "")
@@ -96,6 +98,7 @@ local PATTERNS = {[0] = "seq", "up", "down", "pingpong", "random"}
 
 modes.tempo = {
   name = "TEMPO",
+  detents = {[0] = {[0] = {0.17, 0.83}}},
   knob_icons = {[0] = {"note", "gain", "filter"}, {"start", "attack"}, {"end", "release"}, {"delay", "magic"}, {"tempo"}, {"volume", "mic"}},
   title = function(s)
     return string.format("%s %d", s.st[1] == 1 and "SLICE" or "CHROMA", math.floor((s.st[5] or 320) / 2 + 0.5))
@@ -143,6 +146,8 @@ modes.tempo = {
 
 modes.wave = {
   name = "WAVE",
+  -- in tune is the middle of fine tune
+  detents = {[0] = {[0] = {0.5}}},
   knob_icons = {[0] = {"note", "wave"}, {"attack", "note"}, {"release", "filter"}, {"magic", "filter"}, {"tempo"}, {"gain", "volume"}},
   title = function(s)
     return string.format("%s %d", s.st[1] == 15 and "INIT" or ("P" .. (s.st[1] or 0)), math.floor((s.st[2] or 320) / 2 + 0.5))

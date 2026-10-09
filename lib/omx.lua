@@ -82,6 +82,18 @@ function omx.connect()
   return false
 end
 
+-- True if a device name is an OMX-27 (any board).
+function omx.is_omx(name)
+  return name ~= nil and name:find("omx%-27") ~= nil
+end
+
+-- The OMX-27 was unplugged: forget it without sending anything.
+function omx.lost()
+  if dev then dev.event = nil end
+  dev = nil
+  frame_pending = false
+end
+
 function omx.disconnect()
   if dev then
     send(0x51, {0x05, MODE_MI})

@@ -26,6 +26,7 @@ local modes = include("lib/modes")
 
 local M = modes.tape -- the firmware running now
 local switch_firmware
+local detent
 local SW = {PLAY = 33, LOOP = 34}
 local ENC = {TRANSPORT = 4, VOLUME = 5} -- hardware encoders SW5, SW6
 
@@ -140,6 +141,31 @@ local function omx_led_source(n)
   return nil
 end
 
+-- Sticky points: a pot holds its knob exactly on a detent across a small
+-- zone around it, and the rest of the travel stretches to still reach 0 and 1.
+local DETENT_ZONE = 0.035
+
+detent = function(knob, pos)
+  local pages = M.detents and M.detents[knob]
+  local points = pages and pages[s.knob_page[knob] or 0]
+  if not points then return pos end
+  -- knots of a piecewise-linear map from pot position to knob value
+  local xs, ys = {0}, {0}
+  for _, d in ipairs(points) do
+    xs[#xs + 1] = d - DETENT_ZONE; ys[#ys + 1] = d
+    xs[#xs + 1] = d + DETENT_ZONE; ys[#ys + 1] = d
+  end
+  xs[#xs + 1] = 1; ys[#ys + 1] = 1
+  for i = 2, #xs do
+    if pos <= xs[i] then
+      local span = xs[i] - xs[i - 1]
+      if span <= 0 then return ys[i] end
+      return ys[i - 1] + (ys[i] - ys[i - 1]) * (pos - xs[i - 1]) / span
+    end
+  end
+  return 1
+end
+
 local function start_omx()
   omx.key = function(n, ev)
     saver.touch()
@@ -164,7 +190,7 @@ local function start_omx()
   end
   omx.pot = function(n, v, hires)
     local knob = POT_TO_KNOB[n]
-    local pos = hires / 16383
+    local pos = detent(knob, hires / 16383)
     -- a jittering pot shouldn't keep the screensaver away: only count it once
     -- it has moved 1% from where it last counted
     if not pot_anchor[knob] or math.abs(pos - pot_anchor[knob]) > 0.01 then
@@ -185,6 +211,19 @@ local function start_omx()
     focus(knob)
   end
   omx.connect()
+
+  -- plugged in later, or unplugged and plugged back in
+  midi.add = function(dev)
+    if omx.is_omx(dev.name) then
+      clock.run(function()
+        clock.sleep(0.5) -- let norns finish setting the port up
+        omx.connect()
+      end)
+    end
+  end
+  midi.remove = function(dev)
+    if omx.is_omx(dev.name) then omx.lost() end
+  end
 end
 
 local SAVER_TIMES = {60, 180, 600, math.huge}
