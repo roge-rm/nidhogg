@@ -4,7 +4,7 @@ nidhogg is the CHOMPI [open source firmware](https://github.com/CHOMPI-Club/CHOM
 
 Each of the three firmwares (TAPE, TEMPO, WAVE) is run using the actual code from the CHOMPI source, adapted to run under Linux. You can switch between them in the norns parameter edit screen - the state of each is saved when you switch away and resumed when you come back.
 
-This has only been tested on my [shieldXL](https://github.com/okyeron/shieldXL) unit with a Pi4 2GB inside but it should run fine on a Pi3 unit - like an official norns. Only the OMX-27, Exquis, Launchpad Pro and QuNexus are supported so far, if you'd like another controller supported please come chat with me in #nidhogg **[on my discord](https://discord.gg/9Wun47jGC6)** or open an issue here.
+This has been tested on my [shieldXL](https://github.com/okyeron/shieldXL) unit with a Pi4 2GB inside and on a Pi3 unit - like an official norns. Only the OMX-27, Exquis, Launchpad Pro and QuNexus are supported so far, if you'd like another controller supported please come chat with me in #nidhogg **[on my discord](https://discord.gg/9Wun47jGC6)** or open an issue here.
 
 Thanks to the team at CHOMPI for open sourcing it, I hope this port does it justice.
 
