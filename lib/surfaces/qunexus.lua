@@ -31,6 +31,7 @@ local dev
 local sent = {}    -- key -> brightness last sent
 local held = {}    -- note -> "midi" or "key", how it was pressed
 local menu_open = false
+local quiet_until = 0 -- no lights before this, while it starts up
 local BEND_ON, BEND_OFF = 6000, 2000 -- bend from the middle (8192)
 local shift_held = false
 local knob_mode = false
@@ -118,14 +119,9 @@ function surf.connect()
       dev = midi.connect(i)
       dev.event = on_midi
       sent, held, shift_held, knob_mode = {}, {}, false, false
-      -- it takes a moment to start up after being plugged in and misses
-      -- lights sent before then, so they're sent again a few times
-      clock.run(function()
-        for _, t in ipairs({1, 1, 2}) do
-          clock.sleep(t)
-          sent = {}
-        end
-      end)
+      -- it takes a moment to start up after being plugged in, and lights
+      -- sent before then upset it, so they wait
+      quiet_until = util.time() + 2.5
       return true
     end
   end
@@ -149,6 +145,7 @@ function surf.refresh() sent = {} end
 
 function surf.frame(st)
   menu_open = st.menu
+  if util.time() < quiet_until then return end
   for k = 0, 24 do
     local v
     if knob_mode then
