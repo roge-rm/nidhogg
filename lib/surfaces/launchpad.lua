@@ -42,18 +42,17 @@ local KNOB_ROW = {[8] = 0, [7] = 1, [6] = 2, [5] = 3} -- grid row -> CHOMPI knob
 local TRANSPORT, VOLUME = 4, 5
 local NUDGE = {[1] = -8, -4, -2, -1, 1, 2, 4, 8} -- by column
 
--- Rows 1-4: the piano. White keys on rows 1 and 3, the black key above and
--- right of each white key on rows 2 and 4 (none above E and B).
+-- Rows 1-4: the piano. White keys on rows 1 and 3, and on rows 2 and 4 each
+-- black key over the white key above it (C# over D), leaving gaps over C, F
+-- and the top C, as on a piano.
 local KEY_AT = {} -- pad note -> CHOMPI key 0-24
 do
   local WHITE = {0, 2, 4, 5, 7, 9, 11, 12}
-  local SHARP = {1, 3, nil, 6, 8, 10}
+  local SHARP = {[2] = 1, [3] = 3, [5] = 6, [6] = 8, [7] = 10}
   for oct = 0, 1 do
     local row = 1 + oct * 2
     for col = 1, 8 do KEY_AT[row * 10 + col] = oct * 12 + WHITE[col] end
-    for col = 1, 6 do
-      if SHARP[col] then KEY_AT[(row + 1) * 10 + col] = oct * 12 + SHARP[col] end
-    end
+    for col, k in pairs(SHARP) do KEY_AT[(row + 1) * 10 + col] = oct * 12 + k end
   end
 end
 
