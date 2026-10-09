@@ -35,6 +35,8 @@ If SuperCollider won't start after you've been logged in over ssh, restart the n
 
 CHOMPI is by CHOMPI Club, now part of Chase Bliss, with hardware and the original firmware by Electrosmith. The firmware is MIT licensed ([github.com/CHOMPI-Club/CHOMPI](https://github.com/CHOMPI-Club/CHOMPI)) and the copy in `third_party/chompi` keeps its licences. The CHOMPI name belongs to Chase Bliss.
 
+nidhogg is MIT licensed too, see [LICENSE](LICENSE).
+
 The OMX-27 is by Denki Oto, with firmware by okyeron and Quixotic7.
 
 How it works is in [docs/design.md](docs/design.md), and building the plugins in [docs/building.md](docs/building.md).
