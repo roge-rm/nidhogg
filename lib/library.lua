@@ -168,26 +168,32 @@ function lib.scan(done)
   end)
 end
 
--- fw's banks and the library items that fit them. done(banks, items):
--- banks {id, label, loaded, count}, loaded being the item in it (nil if it
--- isn't from the library); items {id, label}.
+-- fw's banks and what the library has for them. done(banks, items, samples):
+-- banks {id, label, loaded, count, slots}, loaded being the item in it (nil
+-- if it isn't from the library) and slots {[n] = name}; items {id, label}
+-- are whole packs, samples {id, label} single files.
 function lib.banks(fw, done)
   run("python3 " .. q(PY) .. " banks " .. fw .. " " .. q(CARDS), function(_, out)
-    local banks, items = {}, {}
+    local banks, items, samples = {}, {}, {}
     for line in out:gmatch("[^\n]+") do
       local f = fields(line)
       if f[1] == "bank" then
         banks[#banks + 1] = {id = f[2], label = f[3], loaded = f[4] ~= "-" and f[4] or nil,
-          count = tonumber(f[5])}
+          count = tonumber(f[5]), slots = {}}
+      elseif f[1] == "slot" and #banks > 0 then
+        banks[#banks].slots[tonumber(f[3])] = f[4]
       elseif f[1] == "item" then
         items[#items + 1] = {id = f[2], label = f[3]}
+      elseif f[1] == "sample" then
+        samples[#samples + 1] = {id = f[2], label = f[3]}
       end
     end
-    done(banks, items)
+    done(banks, items, samples)
   end)
 end
 
--- Runs jobs: {"import", pack, target, files} or {"load", item, bank}.
+-- Runs jobs: {"import", pack, target, files}, {"load", item, bank} or
+-- {"slot", sample, bank, n}.
 -- done(ok) once the files are in place; the restart is up to the caller.
 function lib.start(fw, jobs, done)
   local lines = {}

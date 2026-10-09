@@ -64,43 +64,73 @@ end
 
 local function mode_of(bank) return bank.id:match("^(%a+)") end
 
+-- Where a pack can go: {kind = "library"}, {kind = "replace", bank = i}
+-- (replacing that bank, and the ones after if the pack needs more), or
+-- {kind = "add", bank = i} (into that bank's empty slots).
+local LIBRARY = {kind = "library"}
+
+local function options(pack)
+  local out = {LIBRARY}
+  -- samples can't go in WAVE's tables
+  if st.fw == "wave" and not pack.tables then return out end
+  local need, n = span(st.fw, pack), picked(pack)
+  for i, b in ipairs(st.banks) do
+    local last = st.banks[i + need - 1]
+    if last and mode_of(last) == mode_of(b) then out[#out + 1] = {kind = "replace", bank = i} end
+    if st.fw ~= "wave" and b.count > 0 and SLOTS - b.count >= n then
+      out[#out + 1] = {kind = "add", bank = i}
+    end
+  end
+  return out
+end
+
+local function same(a, b) return a.kind == b.kind and a.bank == b.bank end
+
 -- the banks other ticked packs are going to
 local function taken(except)
   local t = {}
   for _, p in ipairs(st.packs) do
-    if p ~= except and p.tick and p.target > 0 then
-      for i = p.target, p.target + span(st.fw, p) - 1 do t[i] = true end
+    if p ~= except and p.tick and p.target.bank then
+      local last = p.target.kind == "add" and p.target.bank or p.target.bank + span(st.fw, p) - 1
+      for i = p.target.bank, last do t[i] = true end
     end
   end
   return t
 end
 
--- The first run of empty banks that fits the pack, in the mode its files are
--- named for; 0 (the library) if there's none. Samples can't go in WAVE's
--- tables, so on WAVE they only go in the library.
+-- Empty banks first, in the mode the pack's files are named for, then room
+-- in a bank that has some, then the library.
 local function default_target(pack)
-  if st.fw == "wave" and not pack.tables then return 0 end
   local used = taken(pack)
   local need = span(st.fw, pack)
-  for _, strict in ipairs({true, false}) do
-    for i = 1, #st.banks - need + 1 do
-      local ok = true
-      for j = i, i + need - 1 do
-        local b = st.banks[j]
-        if used[j] or b.count > 0 or mode_of(b) ~= mode_of(st.banks[i])
-          or (strict and pack.kind and mode_of(b) ~= pack.kind) then ok = false end
+  local opts = options(pack)
+  for _, want in ipairs({"replace", "add"}) do
+    for _, strict in ipairs({true, false}) do
+      for _, o in ipairs(opts) do
+        if o.kind == want then
+          local ok = true
+          local last = want == "add" and o.bank or o.bank + need - 1
+          for j = o.bank, last do
+            local b = st.banks[j]
+            if used[j] or (want == "replace" and b.count > 0)
+              or (strict and pack.kind and mode_of(b) ~= pack.kind) then ok = false end
+          end
+          if ok then return o end
+        end
       end
-      if ok then return i end
     end
   end
-  return 0
+  return LIBRARY
 end
 
 local function target_label(pack)
-  if pack.target == 0 then return "library" end
-  local a, n = st.banks[pack.target], span(st.fw, pack)
+  local t = pack.target
+  if t.kind == "library" then return "library" end
+  local a = st.banks[t.bank]
+  if t.kind == "add" then return "+ " .. a.label end
+  local n = span(st.fw, pack)
   if n == 1 then return a.label end
-  local b = st.banks[math.min(#st.banks, pack.target + n - 1)]
+  local b = st.banks[math.min(#st.banks, t.bank + n - 1)]
   return a.label .. "-" .. (b.label:match("(%S+)$"))
 end
 
@@ -119,7 +149,7 @@ function ui.open_import(fw)
         p.tables = fw == "wave" and not p.kind
         p.on = {}
         for _, f in ipairs(p.files) do p.on[f] = true end
-        p.target = 0
+        p.target = LIBRARY
       end
       st.state = #packs > 0 and "list" or "empty"
     end)
@@ -136,8 +166,8 @@ end
 local function replacing()
   local out = {}
   for _, p in ipairs(ticked()) do
-    if p.target > 0 then
-      for i = p.target, math.min(#st.banks, p.target + span(st.fw, p) - 1) do
+    if p.target.kind == "replace" then
+      for i = p.target.bank, math.min(#st.banks, p.target.bank + span(st.fw, p) - 1) do
         if st.banks[i].count > 0 then out[#out + 1] = st.banks[i].label end
       end
     end
@@ -150,8 +180,10 @@ local function do_import()
   for _, p in ipairs(ticked()) do
     local files = {}
     for _, f in ipairs(p.files) do if p.on[f] then files[#files + 1] = f end end
-    local target = p.target > 0 and st.banks[p.target].id or "library"
-    any_bank = any_bank or p.target > 0
+    local t = p.target
+    local target = t.kind == "library" and "library"
+      or ((t.kind == "add" and "add:" or "") .. st.banks[t.bank].id)
+    any_bank = any_bank or t.kind ~= "library"
     jobs[#jobs + 1] = {"import", p, target, files}
   end
   st.state = "working"
@@ -172,7 +204,12 @@ local function import_key(n)
     if n == 3 then
       local f = p.files[s.fcursor]
       p.on[f] = not p.on[f]
-      if p.tick and p.target > 0 then p.target = default_target(p) end
+      -- a different count may not fit where it was going
+      if p.tick then
+        local fits = false
+        for _, o in ipairs(options(p)) do fits = fits or same(o, p.target) end
+        if not fits then p.target = default_target(p) end
+      end
     elseif n == 2 then
       s.state = "list"
     end
@@ -226,15 +263,11 @@ local function import_enc(n, d)
     s.top = scroll(s.cursor, s.top, #s.packs + 1)
   elseif n == 3 then
     local p = s.packs[s.cursor]
-    if not (p and p.tick) or (s.fw == "wave" and not p.tables) then return end
-    -- step through the library and each bank the pack fits from
-    local need = span(s.fw, p)
-    local t = p.target
-    repeat
-      t = t + (d > 0 and 1 or -1)
-      if t < 0 or t > #s.banks then return end
-    until t == 0 or (t + need - 1 <= #s.banks and mode_of(s.banks[t]) == mode_of(s.banks[t + need - 1]))
-    p.target = t
+    if not (p and p.tick) then return end
+    local opts = options(p)
+    local i = 1
+    for j, o in ipairs(opts) do if same(o, p.target) then i = j end end
+    p.target = opts[util.clamp(i + d, 1, #opts)]
   end
 end
 
@@ -329,7 +362,7 @@ local function draw_import()
   screen.level(4)
   screen.move(2, 63)
   local p = s.packs[s.cursor]
-  if p and p.tick and not (s.fw == "wave" and not p.tables) then
+  if p and p.tick and #options(p) > 1 then
     screen.text("E3 where   K1 samples")
   elseif p then
     screen.text("K3 tick   K1 samples")
@@ -343,17 +376,22 @@ end
 function ui.open_library(fw)
   if st and (st.state == "working" or st.waiting) then return end
   st = {mode = "library", fw = fw, state = "loading", cursor = 1, top = 1}
-  lib.banks(fw, function(banks, items)
+  lib.banks(fw, function(banks, items, samples)
     if not st or st.mode ~= "library" then return end
-    st.banks, st.items = banks, items
-    for _, b in ipairs(banks) do b.choice = 0 end -- 0 keeps what's there
+    st.banks, st.items, st.samples = banks, items, samples
+    for _, b in ipairs(banks) do
+      b.choice = 0 -- 0 keeps what's there
+      b.pick = {}  -- slot -> sample index, for single slots
+    end
     st.state = "list"
   end)
 end
 
 local function item_label(id)
   for _, it in ipairs(st.items) do if it.id == id then return it.label end end
-  return id
+  -- factory banks are only copied into the library when they're replaced
+  if id:match("^factory/") then return "factory" end
+  return (id:gsub("[#@]%d+$", ""))
 end
 
 local function bank_tag(b)
@@ -362,25 +400,50 @@ local function bank_tag(b)
   return b.count > 0 and "own samples" or "empty"
 end
 
+local function slot_changes(b)
+  local n = 0
+  if b.choice == 0 then
+    for _, v in pairs(b.pick) do if v > 0 then n = n + 1 end end
+  end
+  return n
+end
+
+local function bank_changed(b)
+  return (b.choice > 0 and st.items[b.choice].id ~= b.loaded) or slot_changes(b) > 0
+end
+
 local function changes()
   local t = {}
-  for _, b in ipairs(st.banks) do
-    if b.choice > 0 and st.items[b.choice].id ~= b.loaded then t[#t + 1] = b end
-  end
+  for _, b in ipairs(st.banks) do if bank_changed(b) then t[#t + 1] = b end end
   return t
 end
 
 local function library_key(n)
   local s = st
   if s.state == "failed" then close(); return end
+  if s.state == "slots" then
+    if n == 2 then s.state = "list" end
+    return
+  end
   if s.state ~= "list" then return end
+  local b = s.banks[s.cursor]
   if n == 2 then
     close()
-  elseif n == 3 and s.cursor > #s.banks then
+  elseif n == 1 and b and s.fw ~= "wave" and b.choice == 0 then
+    s.state, s.open, s.scursor, s.stop = "slots", s.cursor, 1, 1
+  elseif n == 3 and not b then
     local c = changes()
     if #c == 0 then return end
     local jobs = {}
-    for _, b in ipairs(c) do jobs[#jobs + 1] = {"load", s.items[b.choice].id, b.id} end
+    for _, cb in ipairs(c) do
+      if cb.choice > 0 then
+        jobs[#jobs + 1] = {"load", s.items[cb.choice].id, cb.id}
+      else
+        for slot, v in pairs(cb.pick) do
+          if v > 0 then jobs[#jobs + 1] = {"slot", s.samples[v].id, cb.id, tostring(slot)} end
+        end
+      end
+    end
     s.state = "working"
     local fw = s.fw
     lib.start(fw, jobs, function(ok)
@@ -392,6 +455,16 @@ end
 
 local function library_enc(n, d)
   local s = st
+  if s.state == "slots" then
+    local b = s.banks[s.open]
+    if n == 2 then
+      s.scursor = util.clamp(s.scursor + d, 1, SLOTS)
+      s.stop = scroll(s.scursor, s.stop, SLOTS)
+    elseif n == 3 then
+      b.pick[s.scursor] = util.clamp((b.pick[s.scursor] or 0) + d, 0, #s.samples)
+    end
+    return
+  end
   if s.state ~= "list" then return end
   if n == 2 then
     s.cursor = util.clamp(s.cursor + d, 1, #s.banks + 1)
@@ -402,11 +475,35 @@ local function library_enc(n, d)
   end
 end
 
+local function draw_slots()
+  local s = st
+  local b = s.banks[s.open]
+  screen.level(6)
+  right(127, 8, b.label)
+  for i = s.stop, math.min(SLOTS, s.stop + ROWS - 1) do
+    local y = 18 + (i - s.stop) * 9
+    local v = b.pick[i] or 0
+    local name = v > 0 and ("* " .. s.samples[v].label) or (b.slots[i] or "empty")
+    screen.level(i == s.scursor and 15 or (v > 0 and 10 or (b.slots[i] and 5 or 3)))
+    screen.move(2, y)
+    screen.text(tostring(i))
+    screen.move(16, y)
+    screen.text(fit(name, 110))
+  end
+  screen.level(4)
+  screen.move(2, 63)
+  screen.text("E3 sample   K2 back")
+end
+
 local function draw_library()
   local s = st
   screen.level(15)
   screen.move(2, 8)
   screen.text("LIBRARY")
+  if s.state == "slots" then
+    draw_slots()
+    return
+  end
   if s.state ~= "list" then
     screen.level(8)
     screen.move(64, 34)
@@ -419,11 +516,13 @@ local function draw_library()
     local y = 18 + (i - s.top) * 9
     local b = s.banks[i]
     if b then
-      local changed = b.choice > 0 and s.items[b.choice].id ~= b.loaded
+      local changed = bank_changed(b)
       screen.level(i == s.cursor and 15 or 6)
       screen.move(2, y)
       screen.text(b.label)
-      local tag = (changed and "* " or "") .. bank_tag(b)
+      local tag = bank_tag(b)
+      if slot_changes(b) > 0 then tag = string.format("%d slot%s", slot_changes(b), slot_changes(b) == 1 and "" or "s") end
+      if changed then tag = "* " .. tag end
       screen.level(i == s.cursor and 15 or (changed and 10 or 4))
       right(127, y, fit(tag, 80))
     else
@@ -434,7 +533,13 @@ local function draw_library()
   end
   screen.level(4)
   screen.move(2, 63)
-  screen.text(s.cursor > #s.banks and "K3 load  K2 back" or "E3 choose  K2 back")
+  if s.cursor > #s.banks then
+    screen.text("K3 load   K2 back")
+  elseif s.fw ~= "wave" then
+    screen.text("E3 pack   K1 slots")
+  else
+    screen.text("E3 table   K2 back")
+  end
 end
 
 -- both -----------------------------------------------------------------------

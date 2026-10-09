@@ -21,12 +21,16 @@ Commands (all write TSV lines on stdout):
       can't be read.
   banks FW CARDS
       "bank<TAB>id<TAB>label<TAB>loaded<TAB>count" for each of FW's banks,
-      then "item<TAB>id<TAB>label" for each library item that fits them.
+      each followed by "slot<TAB>bank<TAB>n<TAB>name" for its samples; then
+      "item<TAB>id<TAB>label" for each library item that fits them and
+      "sample<TAB>path<TAB>label" for each single library file.
   run FW CARDS JOBS STATUS SLOTS
       JOBS lines: "import<TAB>source<TAB>target<TAB>file|file...<TAB>name<TAB>kind"
       converts a pack into the library as name, as samples or tables (kind)
       and, unless target is "library", loads it there;
-      "load<TAB>item<TAB>target" loads a library item into a bank. Progress
+      target "add:<bank>" puts it in that bank's empty slots instead;
+      "load<TAB>item<TAB>bank" loads a library item into a bank, replacing
+      it; "slot<TAB>path<TAB>bank<TAB>n" puts one library file in slot n. Progress
       goes to STATUS and the card slots changed to SLOTS.
   presets FW CARDS SLOTS
       Resets the presets of those slots. Only while the firmware is stopped,
@@ -431,8 +435,45 @@ def items(fw, cards):
     return out
 
 
+def sample_name(path):
+    """A library file's name without its "NN " slot prefix."""
+    return re.sub(r"^\d+ ", "", os.path.splitext(os.path.basename(path))[0])
+
+
+def put(fw, src, dst):
+    """Writes a library file into a card slot."""
+    if fw == "wave":
+        shutil.copyfile(src, dst + ".part")
+        os.replace(dst + ".part", dst)
+        return
+    data = read_pcm(src)
+    if fw == "tempo":
+        data = data[:TEMPO_SECONDS * 48000 * 4]
+    write_pcm(dst, data)
+    if fw == "tape":
+        frames = array.array("I", data)  # one 32-bit word per stereo frame
+        write_pcm(dst[:-4] + "_double.wav", frames[::2].tobytes())
+
+
+def remember(fw, cards, db, bank, item, names):
+    db[fw + "/" + bank] = {"item": item, "files": bank_state(fw, cards, bank),
+                           "names": {str(k): v for k, v in names.items()}}
+
+
+def slot_names(fw, cards, db, bank):
+    """{slot: name} of the samples in a bank, as imported where known."""
+    entry = db.get(fw + "/" + bank) or {}
+    known = entry.get("names", {}) if entry.get("files") == bank_state(fw, cards, bank) else {}
+    out = {}
+    for slot, p in bank_files(fw, cards, bank).items():
+        if os.path.exists(p):
+            out[slot] = known.get(str(slot), os.path.splitext(os.path.basename(p))[0])
+    return out
+
+
 def load_item(fw, cards, db, item, bank, say):
-    """Puts a library item in a bank; returns the slots changed."""
+    """Puts a library item in a bank, replacing what's there; returns the
+    slots changed."""
     keep_bank(fw, cards, db, bank, say)
     if fw == "wave":
         name, _, idx = item.partition("@")
@@ -464,20 +505,50 @@ def load_item(fw, cards, db, item, bank, say):
         used[s] = f
     say("loading %s" % bank_label(bank))
     for s, f in sorted(used.items()):
-        dst = slots_now[s]
-        if fw == "wave":
-            shutil.copyfile(f, dst + ".part")
-            os.replace(dst + ".part", dst)
-            continue
-        data = read_pcm(f)
-        if fw == "tempo":
-            data = data[:TEMPO_SECONDS * 48000 * 4]
-        write_pcm(dst, data)
-        if fw == "tape":
-            frames = array.array("I", data)  # one 32-bit word per stereo frame
-            write_pcm(dst[:-4] + "_double.wav", frames[::2].tobytes())
-    db[fw + "/" + bank] = {"item": item, "files": bank_state(fw, cards, bank)}
-    return sorted(used)
+        put(fw, f, slots_now[s])
+    remember(fw, cards, db, bank, item, {s: sample_name(f) for s, f in used.items()})
+    return list(slots_now) if fw != "wave" else sorted(used)
+
+
+def add_files(fw, cards, db, files, bank, say):
+    """Puts library files in a bank's empty slots, as many as fit; returns
+    the slots changed."""
+    names = slot_names(fw, cards, db, bank)
+    slots_now = bank_files(fw, cards, bank)
+    free = [s for s in sorted(slots_now) if not os.path.exists(slots_now[s])]
+    say("adding to %s" % bank_label(bank))
+    done = []
+    for f, s in zip(files, free):
+        put(fw, f, slots_now[s])
+        names[s] = sample_name(f)
+        done.append(s)
+    remember(fw, cards, db, bank, "-", names)
+    return done
+
+
+def set_slot(fw, cards, db, f, bank, slot, say):
+    """Puts one library file in one slot; the bank is kept in the library
+    first if that replaces a sample that isn't there yet."""
+    slots_now = bank_files(fw, cards, bank)
+    if os.path.exists(slots_now[slot]):
+        keep_bank(fw, cards, db, bank, say)
+    names = slot_names(fw, cards, db, bank)
+    put(fw, f, slots_now[slot])
+    names[slot] = sample_name(f)
+    remember(fw, cards, db, bank, "-", names)
+    return [slot]
+
+
+def lib_samples(fw, cards):
+    """[(path relative to its kind's folder, label)] of every library file
+    that fits fw's slots."""
+    kind = "tables" if fw == "wave" else "samples"
+    base = os.path.join(lib_dir(cards), kind)
+    out = []
+    for name, folder in sorted(lib_packs(cards, kind).items(), key=lambda kv: natural(kv[0])):
+        for f in pack_wavs(folder):
+            out.append((os.path.join(name, f), "%s/%s" % (name, sample_name(f))))
+    return out
 
 
 # --- jobs ------------------------------------------------------------------
@@ -553,7 +624,12 @@ def run(fw, cards, jobs_file, status, slots_out):
             with open(os.path.join(lib_dir(cards), kind, pack, "source.tsv"), "w") as f:
                 for name in made:
                     f.write("%s\t%s\n" % (name, fps.get(name, fingerprint(name, 0))))
-            if target != "library":
+            if target.startswith("add:"):
+                folder = os.path.join(lib_dir(cards), kind, pack)
+                files = [os.path.join(folder, f) for f in pack_wavs(folder)]
+                bank = target[4:]
+                changed.append((bank, add_files(fw, cards, db, files, bank, say)))
+            elif target != "library":
                 its = [i for i, _ in items(fw, cards) if i.split("#")[0].split("@")[0] == pack]
                 banks = bank_ids(fw)
                 start = banks.index(target)
@@ -565,6 +641,11 @@ def run(fw, cards, jobs_file, status, slots_out):
         elif job[0] == "load":
             _, item, bank = job
             changed.append((bank, load_item(fw, cards, db, item, bank, say)))
+        elif job[0] == "slot":
+            _, rel, bank, slot = job
+            kind = "tables" if fw == "wave" else "samples"
+            f = os.path.join(lib_dir(cards), kind, rel)
+            changed.append((bank, set_slot(fw, cards, db, f, bank, int(slot), say)))
     save_json(os.path.join(lib_dir(cards), "banks.json"), db)
     with open(slots_out, "w") as f:
         for bank, slots in changed:
@@ -572,8 +653,9 @@ def run(fw, cards, jobs_file, status, slots_out):
     msg = []
     if imported:
         msg.append("imported %d" % imported)
-    if changed:
-        msg.append("loaded %d bank%s" % (len(changed), "" if len(changed) == 1 else "s"))
+    banks_changed = len({b for b, _ in changed})
+    if banks_changed:
+        msg.append("changed %d bank%s" % (banks_changed, "" if banks_changed == 1 else "s"))
     if failed:
         msg.append("%d failed" % failed)
     say(", ".join(msg) or "nothing to do")
@@ -611,8 +693,8 @@ def reset_presets(fw, cards, slots_file):
         else:
             rows = p[("chroma", "slice").index(bank)]
             default = TEMPO_PRESET
-        # every slot of a replaced bank, as the old settings don't fit the new samples
-        for s in range(1, SLOTS + 1):
+        # the old settings don't fit the new samples
+        for s in slots:
             rows[s - 1] = list(default)
     tmp = path + ".part"
     with open(tmp, "w") as f:
@@ -646,8 +728,12 @@ def main(argv):
             item = loaded(fw, cards, db, bank)
             n = len(bank_state(fw, cards, bank))
             print("bank\t%s\t%s\t%s\t%d" % (bank, bank_label(bank), item or "-", n))
+            for slot, name in sorted(slot_names(fw, cards, db, bank).items()):
+                print("slot\t%s\t%d\t%s" % (bank, slot, name))
         for item, label in items(fw, cards):
             print("item\t%s\t%s" % (item, label))
+        for rel, label in lib_samples(fw, cards):
+            print("sample\t%s\t%s" % (rel, label))
         return 0
     if cmd == "run":
         return run(*argv[2:7])
