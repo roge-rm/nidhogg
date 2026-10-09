@@ -4,8 +4,8 @@
 -- - RP2040 (v3): the 1200-baud reset into its USB bootloader, then the .uf2
 --   copied onto the drive that appears.
 -- - Teensy 3.2 (v1) and 4.0 (v2): the 134-baud reset into the Teensy
---   bootloader, then teensy_loader_cli (installed with apt if missing). If
---   the reset doesn't take, pressing the Teensy's button does the same.
+--   bootloader, then bin/teensy_loader_cli. Without a serial port there's no
+--   reset, so it waits for the Teensy's button to be pressed.
 -- Updating clears the OMX-27's saved patterns and settings.
 
 local up = {}
@@ -15,8 +15,9 @@ local RELEASES = "https://api.github.com/repos/Quixotic7/OMX-27/releases/latest"
 -- used if the latest release can't be read
 local FALLBACK = "https://github.com/Quixotic7/OMX-27/releases/download/v1.15.7/OMX-27-1.15.7-"
 local ASSETS = {rp2040 = "RP2040_FormSeq.uf2", teensy40 = "T4_FormSeq.hex", teensy32 = "T31_FormSeq.hex"}
-local MCU = {teensy40 = "TEENSY40", teensy32 = "TEENSY31"}
+local MCU = {teensy40 = "TEENSY40", teensy32 = "TEENSY32"}
 local WORK = _path.data .. "nidhogg/omx-update"
+local LOADER = _path.code .. "nidhogg/bin/teensy_loader_cli"
 
 up.status = nil -- progress text while updating
 
@@ -93,11 +94,10 @@ function up.start(found, done)
     }) do lines[#lines + 1] = l end
   else
     for _, l in ipairs({
-      "command -v teensy_loader_cli > /dev/null || { say 'installing the Teensy loader'; sudo apt-get install -y teensy-loader-cli > /dev/null 2>&1 || { sudo apt-get update > /dev/null && sudo apt-get install -y teensy-loader-cli > /dev/null; }; }",
       "say 'restarting the OMX-27'",
       (found.tty and ("stty -F " .. found.tty .. " 134 || true") or "true"),
-      "say 'writing the firmware (press the Teensy button if this waits)'",
-      "sudo teensy_loader_cli --mcu=" .. MCU[board] .. " -w -v " .. file .. " > /dev/null",
+      (found.tty and "say 'writing the firmware'" or "say 'press the button on the Teensy'"),
+      "sudo '" .. LOADER .. "' --mcu=" .. MCU[board] .. " -w -v " .. file .. " > /dev/null",
     }) do lines[#lines + 1] = l end
   end
   lines[#lines + 1] = "say 'done'"
