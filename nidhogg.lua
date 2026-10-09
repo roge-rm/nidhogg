@@ -24,15 +24,13 @@ local saver = include("lib/saver")
 local options = include("lib/options")
 local modes = include("lib/modes")
 local omxupdate = include("lib/omxupdate")
-local import = include("lib/import")
+local library = include("lib/library")
+local libui = include("lib/libraryui")
 
 local M = modes.tape -- the firmware running now
 local switch_firmware
 -- set when the OMX-27's firmware is too old: {version, found, board, state}
 local update_prompt = nil
--- the sample import screen while it's open: {state, packs, targets, p, t}
-local importer = nil
-local open_import
 local detent
 local SW = {PLAY = 33, LOOP = 34}
 local ENC = {TRANSPORT = 4, VOLUME = 5} -- hardware encoders SW5, SW6
@@ -298,7 +296,9 @@ local function add_params()
   end)
 
   params:add_trigger("import", "import samples")
-  params:set_action("import", function() open_import() end)
+  params:set_action("import", function() libui.open_import(modes.order[params:get("firmware")]) end)
+  params:add_trigger("library", "sample library")
+  params:set_action("library", function() libui.open_library(modes.order[params:get("firmware")]) end)
 
   for _, fw in ipairs(modes.order) do
     options.add_params(fw, install.card_dir(fw))
@@ -336,9 +336,9 @@ local function start()
   M = modes[modes.order[params:get("firmware")]]
   engine.start(modes.order[params:get("firmware")])
   start_omx()
-  import.watch(open_import, function()
-    if importer and importer.state ~= "working" and importer.state ~= "done" then importer = nil end
-  end)
+  library.watch(function() libui.open_import(modes.order[params:get("firmware")]) end, libui.removed)
+  local notice = library.take_notice()
+  if notice then libui.notice(notice) end
   running = true
   -- a reloaded script has none of the firmware's state yet
   clock.run(function()
@@ -418,7 +418,7 @@ end
 
 function cleanup()
   omx.disconnect()
-  import.unmount()
+  library.unmount()
 end
 
 function osc.event(path, args, from)
@@ -466,115 +466,6 @@ function osc.event(path, args, from)
   end
 end
 
--- The import screen: scans, then E2 picks a pack, E3 where it goes, K3
--- imports (asking first if that replaces samples) and K2 backs out.
-local function current_fw() return modes.order[params:get("firmware")] end
-
--- The first empty place for the pack, in the mode its files are named for.
-local function default_target(u)
-  local kind = u.packs[u.p] and u.packs[u.p].kind
-  local first_empty
-  for i, t in ipairs(u.targets) do
-    local mode = t.id:match("^(%a+)")
-    if t.count == 0 and (not kind or mode == kind) then return i end
-    if t.count == 0 then first_empty = first_empty or i end
-  end
-  for i, t in ipairs(u.targets) do
-    if kind and t.id:match("^(%a+)") == kind then return i end
-  end
-  return first_empty or 1
-end
-
-open_import = function()
-  if importer and importer.state == "working" then return end
-  local fw = current_fw()
-  importer = {state = "scanning", fw = fw}
-  import.scan(fw, install.card_dir(fw), function(packs, targets, bad)
-    if not importer or importer.state ~= "scanning" then return end
-    importer.packs, importer.targets, importer.bad = packs, targets, bad
-    importer.p = 1
-    importer.t = default_target(importer)
-    importer.state = #packs > 0 and "choose" or "empty"
-  end)
-end
-
-local function import_key(n, z)
-  if z == 0 then return end
-  local u = importer
-  if n == 2 and u.state ~= "working" and u.state ~= "done" then
-    if u.state == "confirm" then u.state = "choose" else importer = nil end
-    return
-  end
-  if n ~= 3 then return end
-  local target = u.targets and u.targets[u.t]
-  if u.state == "choose" and target.count > 0 then
-    u.state = "confirm"
-  elseif u.state == "choose" or u.state == "confirm" then
-    u.state = "working"
-    local card = install.card_dir(u.fw)
-    import.start(u.fw, card, u.packs[u.p], target, function(ok)
-      if not ok then
-        u.state = "failed"
-        return
-      end
-      u.state = "done"
-      install.restart(import.presets_cmd(u.fw, card))
-    end)
-  elseif u.state == "failed" then
-    importer = nil
-  end
-end
-
-local function draw_import()
-  local u = importer
-  local function line(y, level, text)
-    screen.level(level)
-    screen.move(64, y)
-    screen.text_center(text)
-  end
-  -- keeps the end of a long name, which is the part that tells packs apart
-  local function fit(text)
-    if screen.text_extents(text) <= 124 then return text end
-    while #text > 1 and screen.text_extents("..." .. text) > 124 do text = text:sub(2) end
-    return "..." .. text
-  end
-  line(10, 15, "IMPORT")
-  if u.state == "scanning" then
-    line(34, 8, "looking for samples")
-  elseif u.state == "empty" and #u.bad > 0 then
-    line(28, 8, "couldn't read " .. fit(u.bad[1]))
-    line(38, 8, "it may not have copied fully")
-    line(58, 15, "K2 back")
-  elseif u.state == "empty" then
-    line(28, 8, "no samples found on the stick")
-    line(38, 8, "or in audio/nidhogg/import")
-    line(58, 15, "K2 back")
-  elseif u.state == "choose" or u.state == "confirm" then
-    local pack, target = u.packs[u.p], u.targets[u.t]
-    line(23, 15, fit(pack.name))
-    line(32, 6, string.format("%d %s", pack.count, u.fw == "wave" and "tables" or "samples"))
-    local into = "to " .. target.label
-    if u.fw ~= "wave" then
-      into = into .. (target.count > 0 and string.format(" (has %d)", target.count) or " (empty)")
-    end
-    line(44, 15, into)
-    if u.state == "confirm" then
-      line(58, 15, "K3 replace them    K2 back")
-    else
-      line(58, 8, "K3 import    K2 cancel")
-    end
-  elseif u.state == "working" then
-    line(34, 8, import.status or "importing")
-  elseif u.state == "done" then
-    line(28, 8, import.status or "imported")
-    line(40, 8, "restarting to load them")
-  else
-    line(28, 8, import.status or "import failed")
-    line(40, 5, "see data/nidhogg/import/log")
-    line(58, 15, "K3 ok")
-  end
-end
-
 local function update_key(n, z)
   if z == 0 then return end
   local u = update_prompt
@@ -601,8 +492,8 @@ end
 
 function key(n, z)
   saver.touch()
-  if importer then
-    import_key(n, z)
+  if libui.active() then
+    libui.key(n, z)
     return
   end
   if update_prompt then
@@ -620,18 +511,8 @@ end
 
 function enc(n, d)
   saver.touch()
-  if importer then
-    local u = importer
-    if u.state == "choose" then
-      if n == 2 then
-        u.p = util.clamp(u.p + d, 1, #u.packs)
-        if not u.t_chosen then u.t = default_target(u) end
-      end
-      if n == 3 then
-        u.t = util.clamp(u.t + d, 1, #u.targets)
-        u.t_chosen = true
-      end
-    end
+  if libui.active() then
+    libui.enc(n, d)
     return
   end
   if update_prompt then
@@ -675,8 +556,8 @@ function redraw()
     screen.update()
     return
   end
-  if importer then
-    draw_import()
+  if libui.active() then
+    libui.draw()
     screen.update()
     return
   end
