@@ -24,6 +24,7 @@ Dan
 - [The looper](#the-looper)
 - [The OMX screen](#the-omx-screen)
 - [Importing samples](#importing-samples)
+- [The library](#the-library)
 - [Settings](#settings)
 - [TEMPO](#tempo)
 - [WAVE](#wave)
@@ -133,20 +134,32 @@ The little screen shows your knobs as five bars, one per pot, with a box when a 
 
 ## Importing samples
 
+nidhogg keeps a sample library on the norns, in `dust/audio/nidhogg/library`. CHOMPI's banks are what's loaded from it right now, and you can swap any pack in or out.
+
 Plug a USB stick into the norns and the import screen comes up. You can also put files in `dust/audio/nidhogg/import` through maiden and open it from **PARAMETERS > EDIT > import samples**.
 
-1. **E2** picks a pack. Each folder of samples is a pack, and so is each folder inside a zip.
-2. **E3** picks where it goes. It starts on the first empty bank.
-3. **K3** imports. If the bank already has samples it asks first, and **K3** again replaces them.
+1. **E2** moves through the packs. Each folder of samples is a pack, and so is each folder inside a zip.
+2. **K3** ticks a pack. **K1** opens it, so you can tick single samples.
+3. **E3** sets where a ticked pack goes: into a bank, added to a bank's empty slots (**+**), or just into the library.
+4. The last row imports everything you ticked.
 
-nidhogg converts the samples to CHOMPI's format, then restarts SuperCollider to load them, which takes about 20 seconds.
+When it's done the stick is unmounted, so you can pull it straight out, and SuperCollider restarts to load the new samples, which takes about 20 seconds.
 
 - It reads wav, aiff, flac and ogg.
-- Up to 14 samples go in a bank, in name order. Packs made for CHOMPI keep their slots.
-- TAPE takes them into JAMMI or CUBBI banks a-e. Banks d and e are empty to start with.
-- TEMPO takes them into chromatic or slice, and cuts them at 10 seconds.
-- WAVE takes wavetables made of 2048-sample frames, like Serum's, or single cycles. They replace the tables from the one you pick onwards.
-- The stick is only read, never written to, so you can pull it out any time.
+- Packs made for CHOMPI keep their slots. Other samples go in name order, and a pack with more than 14 spills into the next bank.
+- Packs you've imported before show as **in library**.
+- TEMPO cuts samples at 10 seconds.
+- On WAVE, packs are wavetables made of 2048-sample frames, like Serum's, or single cycles.
+
+## The library
+
+Open it from **PARAMETERS > EDIT > sample library**. Each row is a bank.
+
+- **E3** picks a pack from the library for the bank.
+- **K1** opens the bank, and **E3** then picks a single sample for each slot.
+- The last row loads your changes.
+
+Before a bank is replaced, whatever was in it is kept in the library, factory samples and your own recordings included, so nothing is lost.
 
 ## Settings
 
