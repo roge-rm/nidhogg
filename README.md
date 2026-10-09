@@ -1,6 +1,6 @@
 # nidhogg
 
-nidhogg is the CHOMPI [open source firmware](https://github.com/CHOMPI-Club/CHOMPI) adapted to norns and designed around the [OMX-27](https://github.com/okyeron/OMX-27).
+nidhogg is the CHOMPI [open source firmware](https://github.com/CHOMPI-Club/CHOMPI) adapted to [norns](https://monome.org/docs/norns/) and designed around the [OMX-27](https://github.com/okyeron/OMX-27).
 
 Each of the three firmwares (TAPE, TEMPO, WAVE) is run using the actual code from the CHOMPI source, adapted to run under Linux. You can switch between them in the norns parameter edit screen - the state of each is saved when you switch away and resumed when you come back.
 
@@ -30,11 +30,11 @@ Dan
 
 ## What you need
 
-- A norns or norns shield.
+- A [norns](https://monome.org/docs/norns/) or [norns shield](https://github.com/okyeron/shieldXL).
 - An OMX-27 plugged into the norns by USB. Any of the three boards works.
 - About 200 MB free, and wifi the first time.
 
-The OMX-27 needs Quixotic7's firmware, 1.15.4 or newer. If it has something older, nidhogg offers to update it: press **K3** to update or **K2** to skip. Updating clears the OMX-27's saved patterns. On a Teensy unit you may need to press the button on the Teensy when the screen asks.
+The OMX-27 needs Quixotic7's firmware, 1.15.4 or newer. If it has something older nidhogg offers to update it: press **K3** to update or **K2** to skip. Updating clears the OMX-27's saved patterns. On a Teensy unit you may need to press the button on the Teensy when the screen asks.
 
 ## Installing
 
