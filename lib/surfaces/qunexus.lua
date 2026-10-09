@@ -3,10 +3,12 @@
 --   playing    keys go to CHOMPI as MIDI notes, so velocity counts (TAPE and
 --              WAVE); pressure, if the QuNexus sends it, goes to the knob
 --              chosen in "pressure to"
---   shift      rock a held key hard upwards (its pitch bend past 3/4 up):
---              its note stops and that key holds CHOMPI's shift until let go
---              of. Playing rocks keys downwards a lot but seldom up past a
---              third, so this doesn't happen by accident.
+--   shift      the bend pad (bottom left): pressed past 3/4 either way it
+--              holds CHOMPI's shift, back near the middle it lets go
+--   octave     its own octave buttons move its notes; nidhogg can't see them
+--              pressed. In JAMMI, CHOMPI plays MIDI notes two octaves below
+--              its keys too, so octave down gives lower notes. The key
+--              lights match the keys at the default octave.
 --   shift menu while it's open the keys press CHOMPI's own keys, as the menu
 --              takes no MIDI notes: slots on the white keys, the shift jobs
 --              on the black ones.
@@ -22,9 +24,8 @@ local dev
 local sent = {}    -- key -> brightness last sent
 local held = {}    -- note -> "midi" or "key", how it was pressed
 local menu_open = false
-local SHIFT_BEND = 6000  -- pitch bend above the middle (8192) that is shift
-local last_note = nil    -- the key pressed most recently, still held
-local shift_note = nil  -- the key holding shift
+local SHIFT_ON, SHIFT_OFF = 6000, 2000 -- bend from the middle (8192)
+local shift_held = false
 
 function surf.match(name)
   if name == nil then return false end
@@ -44,7 +45,6 @@ local function on_midi(data)
     local k = d1 - LOW
     if on then
       a.touch()
-      last_note = d1
       if menu_open and k >= 0 and k <= 24 then
         held[d1] = "key"
         a.key(k, 1)
@@ -55,23 +55,19 @@ local function on_midi(data)
     else
       local how = held[d1]
       held[d1] = nil
-      if last_note == d1 then last_note = nil end
-      if shift_note == d1 then
-        shift_note = nil
-        a.shift(0)
-      elseif how == "key" then a.key(k, 0)
+      if how == "key" then a.key(k, 0)
       elseif how == "midi" then a.midi({0x80, d1, 0}) end
     end
   elseif kind == 0xE0 then
-    -- a held key rocked hard upwards becomes shift
-    local bend = (d1 | (d2 << 7)) - 8192
-    if bend > SHIFT_BEND and last_note and not shift_note then
-      local n = last_note
-      if held[n] == "midi" then a.midi({0x80, n, 0}) elseif held[n] == "key" then a.key(n - LOW, 0) end
-      held[n] = "shift"
-      shift_note = n
+    -- the bend pad is shift
+    local bend = math.abs((d1 | (d2 << 7)) - 8192)
+    if bend > SHIFT_ON and not shift_held then
+      shift_held = true
       a.touch()
       a.shift(1)
+    elseif bend < SHIFT_OFF and shift_held then
+      shift_held = false
+      a.shift(0)
     end
   elseif kind == 0xA0 or kind == 0xD0 then
     a.midi(data)
@@ -83,7 +79,7 @@ function surf.connect()
     if v.device and surf.match(v.name) then
       dev = midi.connect(i)
       dev.event = on_midi
-      sent, held, last_note, shift_note = {}, {}, nil, nil
+      sent, held, shift_held = {}, {}, false
       return true
     end
   end
