@@ -106,6 +106,7 @@ function omx.connect()
       -- a newer connect (it was plugged in again) takes over from this one
       connecting = (connecting or 0) + 1
       local mine = connecting
+      local asked_at = util.time()
       clock.run(function()
         -- ask until it answers: one just switched on can take over 6 s to
         -- start up before it does. Old firmware never answers, so a long wait
@@ -116,6 +117,10 @@ function omx.connect()
           if version_reply or mine ~= connecting or not dev then break end
         end
         if mine ~= connecting or not dev then return end
+        if version_reply then
+          print(string.format("omx-27: firmware %d.%d.%d, answered after %.1f s", version_reply[1],
+            version_reply[2], version_reply[3], util.time() - asked_at))
+        end
         local function go_remote()
           send(0x51, {0x05, MODE_REMOTE})
           -- everything again in full, now that it's listening
