@@ -108,47 +108,32 @@ local record_now = false -- the switch, as of the last frame
 local chompi_held = nil  -- gear or record, while one holds the CHOMPI key
 
 -- The CHOMPI key with the switch set for it: on Play it's shift, on Record it
--- records. The switch goes back where it was when let go of. The short waits
--- keep the switch, the key and the switch back in order.
+-- records. The switch goes back where it was when let go of. The firmware
+-- takes over 30 ms to see the switch move (150 ms is safe), so the key waits
+-- for it, and a quick tap still lets go after it pressed.
+local SWITCH_WAIT = 0.15
+
 local function chompi_as(btn, record, z)
   local a = surf.actions
   if z == 1 then
     if chompi_held then return end
     local was = record_now
-    chompi_held = {btn = btn, was = was}
+    local wait = was ~= record and SWITCH_WAIT or 0
+    chompi_held = {btn = btn, was = was, down_at = util.time() + wait}
     clock.run(function()
-      if was ~= record then a.switch(record); clock.sleep(0.03) end
+      if wait > 0 then a.switch(record); clock.sleep(wait) end
       a.chompi(1)
     end)
   elseif chompi_held and chompi_held.btn == btn then
-    local was = chompi_held.was
+    local held = chompi_held
     chompi_held = nil
     clock.run(function()
-      clock.sleep(0.05)
+      clock.sleep(math.max(0.02, held.down_at + 0.05 - util.time()))
       a.chompi(0)
-      if was ~= record then clock.sleep(0.03); a.switch(was) end
+      if held.was ~= record then clock.sleep(SWITCH_WAIT); a.switch(held.was) end
     end)
   end
 end
-local in_settings = false -- the Exquis's own settings menu is showing
-local pressed = {}      -- pad -> the key it pressed, so it's let go of the
-                        -- same key if the layout changes while it's held
-
-local dev
-local rx = {}
-local sent = {}  -- LED id -> "r,g,b,fx" last sent
-local down = {}  -- CHOMPI key -> pads holding it
-
-function surf.match(name)
-  if name == nil then return false end
-  name = name:lower()
-  -- Developer Mode answers only on the first of its two USB ports
-  return name:find("^exquis") ~= nil and name:find("2$") == nil
-end
-
-function surf.connected() return dev ~= nil end
-
-local function send(m) if dev then dev:send(m) end end
 
 local function on_event(status, d1, d2)
   local a = surf.actions
