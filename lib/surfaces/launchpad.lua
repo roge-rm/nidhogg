@@ -40,7 +40,7 @@ local UP, DOWN, SESSION, VOLUME_PUSH = 80, 70, 93, 4
 local TRACK = 101 -- the first of the 8 under the grid
 local KNOB_ROW = {[8] = 0, [7] = 1, [6] = 2, [5] = 3} -- grid row -> CHOMPI knob
 local TRANSPORT, VOLUME = 4, 5
-local NUDGE = {[1] = -8, -4, -2, -1, 1, 2, 4, 8} -- by column
+local NUDGE = {-8, -4, -2, -1, 1, 2, 4, 8} -- by column, 1-8
 
 -- Rows 1-4: the piano. White keys on rows 1 and 3, and on rows 2 and 4 each
 -- black key over the white key above it (C# over D), leaving gaps over C, F
