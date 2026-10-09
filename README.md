@@ -1,15 +1,17 @@
 # nidhogg
 
-nidhogg runs the firmware from the CHOMPI sampler on a monome norns, with an OMX-27 as the keys and knobs.
+nidhogg is the CHOMPI [open source firmware](https://github.com/CHOMPI-Club/CHOMPI) adapted to norns and designed around the [OMX-27](https://github.com/okyeron/OMX-27).
 
-CHOMPI went open source when it was discontinued, so nidhogg runs its actual firmware: TAPE (the sampler and tape looper it shipped with), TEMPO (a sample arpeggiator and slicer) and WAVE (a wavetable synth). You can switch between them any time and each one picks up where you left it.
+Each of the three firmwares (TAPE, TEMPO, WAVE) is run using the actual code from the CHOMPI source, adapted to run under Linux. You can switch between them in the norns parameter edit screen - the state of each is saved when you switch away and resumed when you come back.
 
 How to play it is in the [guide](docs/guide.html).
 
-Please try it and let me know what works and what doesn't by opening an issue here.
+This has only been tested on my [shieldXL](https://github.com/okyeron/shieldXL) unit with a Pi4 2GB inside but it should run fine on a Pi3 unit - like an official norns. Only support for the OMX-27 has been added so far, if you'd like another controller supported please come chat with me in #nidhogg **[on my discord](https://discord.gg/9Wun47jGC6)** or open an issue here.
 
-Enjoy,<br>
-Dan (rm)
+Thanks to the team at CHOMPI for open sourcing it, I hope this port does it justice.
+
+Enjoy!
+Dan
 
 ---
 
