@@ -83,6 +83,7 @@ do
 end
 
 local menu_open = false -- as of the last frame
+local in_settings = false -- the Exquis's own settings menu is showing
 local pressed = {}      -- pad -> the key it pressed, so it's let go of the
                         -- same key if the layout changes while it's held
 
@@ -154,8 +155,13 @@ local function on_midi(data)
       elseif #rx > 0 then
         rx[#rx + 1] = b
         if b == 0xF7 then
-          -- the Exquis asks for its LEDs again after its settings menu
-          if rx[6] == 0x7F and rx[7] == 0x03 then sent = {} end
+          -- F0 00 21 7E 7F 03 page F7: the Exquis is entering its settings
+          -- menu (page 7F), which draws over the LEDs, or has left it and
+          -- wants them all again
+          if rx[5] == 0x7F and rx[6] == 0x03 then
+            in_settings = rx[7] == 0x7F
+            sent = {}
+          end
           rx = {}
         end
       end
@@ -170,7 +176,7 @@ function surf.connect()
     if v.device and surf.match(v.name) then
       dev = midi.connect(i)
       dev.event = on_midi
-      sent, down, rx, pressed = {}, {}, {}, {}
+      sent, down, rx, pressed, in_settings = {}, {}, {}, {}, false
       send(sysex(0x00, ZONES))
       return true
     end
@@ -194,6 +200,7 @@ function surf.refresh() sent = {} end
 local function c7(r, g, b) return (r or 0) >> 1, (g or 0) >> 1, (b or 0) >> 1 end
 
 function surf.frame(st)
+  if in_settings then return end
   local want = {} -- LED id -> {r, g, b, fx}
   local function set(id, r, g, b, fx) want[id] = {r, g, b, fx or 0} end
   menu_open = st.menu
