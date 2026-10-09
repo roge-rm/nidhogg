@@ -41,13 +41,22 @@ local function capture(cmd)
 end
 
 -- The first partition of the first USB disk, or the disk itself if it has
--- none. An RP2040's update drive (an OMX-27 being updated) isn't a stick.
+-- none. Controllers' own small drives aren't sticks: an RP2040's update
+-- drive (an OMX-27 being updated), or a Launchpad's 192 KB "Easy Start"
+-- drive. So anything under 64 MB, from Novation, or labelled RPI-RP2 is left
+-- alone.
 local function find_device()
   local devs = capture("ls /dev/sd[a-z]* 2>/dev/null")
   local skip = {}
   for d in devs:gmatch("[^\n]+") do
-    if capture("lsblk -no LABEL " .. d .. " 2>/dev/null"):find("RPI%-RP2") then
-      skip[d:match("^/dev/(sd[a-z])")] = true
+    local disk = d:match("^/dev/(sd[a-z])")
+    if d:match("^/dev/sd[a-z]$") then
+      local size, vendor = capture("lsblk -bdno SIZE,VENDOR " .. d .. " 2>/dev/null"):match("^%s*(%d+)%s*(.-)%s*$")
+      if not size or tonumber(size) < 64 * 1024 * 1024 or (vendor or ""):lower():find("novation") then
+        skip[disk] = true
+      end
+    elseif capture("lsblk -no LABEL " .. d .. " 2>/dev/null"):find("RPI%-RP2") then
+      skip[disk] = true
     end
   end
   local disk, part

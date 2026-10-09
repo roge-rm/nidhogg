@@ -350,9 +350,9 @@ local function draw_import()
       screen.move(64, 38)
       screen.text_center("it may not have copied fully")
     else
-      screen.text_center("no samples found on the stick")
+      screen.text_center("no samples on the stick")
       screen.move(64, 38)
-      screen.text_center("or in audio/nidhogg/import")
+      screen.text_center("or in the import folder")
     end
     return
   elseif s.state == "working" then
