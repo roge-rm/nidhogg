@@ -229,6 +229,9 @@ local function start_surfaces()
     send("/pot", {knob, pos})
     focus(knob)
   end
+  surfaces.kinds[1].answered = function()
+    if update_prompt and update_prompt.state == "ask" then update_prompt = nil end
+  end
   surfaces.kinds[1].old_firmware = function(version)
     local found = omxupdate.find() or {}
     update_prompt = {version = version, found = found, board = found.board or "teensy40", state = "ask"}

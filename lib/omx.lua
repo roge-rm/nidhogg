@@ -11,6 +11,7 @@ local EVENTS = {[0] = "up", "down", "hold", "quick"}
 -- called with the firmware version {major, minor, point}, or nil if the
 -- OMX-27 didn't answer, when it's too old for REMOTE mode
 omx.old_firmware = function(version) end
+omx.answered = function() end -- it answered after old_firmware, new enough
 local MIN_VERSION = {1, 15, 4}
 local version_reply = nil
 local connecting = nil -- counts connects, so only the latest acts
@@ -114,15 +115,33 @@ function omx.connect()
           if version_reply or mine ~= connecting or not dev then break end
         end
         if mine ~= connecting or not dev then return end
-        if new_enough(version_reply) then
+        local function go_remote()
           send(0x51, {0x05, MODE_REMOTE})
           -- everything again in full, now that it's listening
           for n = 0, 26 do shown[n] = {-1, -1, -1} end
           last_chunks = {}
           frame_pending = false
           remote = true
-        else
-          omx.old_firmware(version_reply)
+        end
+        if new_enough(version_reply) then
+          go_remote()
+          return
+        end
+        omx.old_firmware(version_reply)
+        if version_reply then return end
+        -- no answer yet: it may only be slow to start. Keep asking for a
+        -- minute, and if it answers new enough, carry on as if it had at once.
+        for _ = 1, 60 do
+          clock.sleep(1)
+          if mine ~= connecting or not dev then return end
+          if version_reply then
+            if new_enough(version_reply) then
+              go_remote()
+              omx.answered()
+            end
+            return
+          end
+          send(0x1F)
         end
       end)
       return true

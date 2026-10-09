@@ -12,6 +12,7 @@ local omx = include("lib/omx")
 local surf = {name = "OMX-27"}
 surf.actions = nil -- set by lib/surfaces.lua
 surf.old_firmware = function(version) end -- set by the script
+surf.answered = function() end -- set by the script: never mind the prompt
 
 local PUSH_KEY = 11
 local POT_TO_KNOB = {[0] = 0, 1, 2, 3, 5}
@@ -65,6 +66,7 @@ function surf.connect()
     a.pot(POT_TO_KNOB[n], hires / 16383)
   end
   omx.old_firmware = function(version) surf.old_firmware(version) end
+  omx.answered = function() surf.answered() end
   return omx.connect()
 end
 
