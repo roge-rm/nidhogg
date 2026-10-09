@@ -62,6 +62,8 @@ kbd { font: 600 12px var(--mono); padding: 1px 6px; border-radius: 4px; border: 
 .oled .chip { padding: 0 3px; }
 .oled .chip.on { background: var(--oled-ink); color: var(--oled-bg); }
 .oled.big .row { font-size: 24px; }
+.shot { display: grid; gap: 4px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
 .oled-cap { font: 12px var(--mono); color: var(--muted); margin-top: 6px; }
 .oled-fig { display: grid; gap: 4px; }
 
@@ -138,29 +140,23 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
         </g>
       </svg>
     </div>
+    <div style="display:grid;gap:10px">
+      <p><b>AUX</b> is the CHOMPI key. The bottom row from the second key up and the ten top keys are CHOMPI's keyboard.</p>
+      <p>On the norns, <b>E1</b> is CHOMPI's switch. Left is Play, where <b>AUX</b> is shift. Right is Record, where <b>AUX</b> records. <b>K2</b> is PLAY, <b>K3</b> is LOOP, <b>E2</b> is Transport and <b>E3</b> is Volume.</p>
+      <p>The keys light up the same way CHOMPI's do.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The norns screen</h2>
     <div class="cols">
-      <div class="scroll">
-        <svg viewBox="0 0 420 250" width="420" height="250" role="img" aria-label="ShieldXL norns: K1 and E1 top left, screen lower left, E2 and E3 right with K2 and K3 below">
-          <rect x="4" y="4" width="412" height="242" rx="10" fill="var(--panel)" stroke="var(--edge)"/>
-          <rect x="18" y="18" width="40" height="40" rx="6" fill="var(--cap)" stroke="var(--edge)"/><text x="38" y="36" text-anchor="middle" font-size="11" font-weight="600">K1</text><text x="38" y="50" text-anchor="middle" font-size="8.5">push</text>
-          <circle cx="86" cy="38" r="17" fill="var(--chompi)" stroke="var(--edge)"/><text x="86" y="42" text-anchor="middle" font-size="11" font-weight="600">E1</text>
-          <text x="112" y="34" class="lbl">E1: Play / Record</text><text x="112" y="48" class="sub">left Play · right Record</text>
-          <rect x="18" y="86" width="210" height="140" rx="3" fill="var(--oled-bg)" stroke="var(--edge)"/>
-          <text x="123" y="122" text-anchor="middle" font-size="10" style="fill:var(--oled-ink)">top half: same as OMX screen</text>
-          <line x1="22" y1="156" x2="224" y2="156" stroke="var(--edge)" stroke-dasharray="3 3"/>
-          <text x="123" y="192" text-anchor="middle" font-size="10" style="fill:var(--oled-ink)">bottom: Chompi's lights</text>
-          <circle cx="292" cy="110" r="17" fill="var(--chompi)" stroke="var(--edge)"/><text x="292" y="114" text-anchor="middle" font-size="11" font-weight="600">E2</text><text x="292" y="146" text-anchor="middle" class="sub">transport</text>
-          <circle cx="372" cy="110" r="17" fill="var(--knob)" stroke="var(--edge)"/><text x="372" y="114" text-anchor="middle" font-size="11" font-weight="600">E3</text><text x="372" y="146" text-anchor="middle" class="sub">volume</text>
-          <rect x="266" y="172" width="52" height="52" rx="6" fill="var(--chompi)" stroke="var(--edge)"/><text x="292" y="194" text-anchor="middle" font-size="11" font-weight="600">K2</text><text x="292" y="210" text-anchor="middle" font-size="9.5">PLAY</text>
-          <rect x="346" y="172" width="52" height="52" rx="6" fill="var(--chompi)" stroke="var(--edge)"/><text x="372" y="194" text-anchor="middle" font-size="11" font-weight="600">K3</text><text x="372" y="210" text-anchor="middle" font-size="9.5">LOOP</text>
-        </svg>
-      </div>
-      <div style="display:grid;gap:10px">
-        <p><b>AUX</b> is the CHOMPI key. The bottom row from the second key up and the ten top keys are CHOMPI's keyboard.</p>
-        <p><b>E1</b> is CHOMPI's switch. Left is Play, where <b>AUX</b> is shift. Right is Record, where <b>AUX</b> records.</p>
-        <p><b>K2</b> is PLAY and <b>K3</b> is LOOP.</p>
-        <p>The keys light up the same way CHOMPI's do.</p>
-      </div>
+      <div class="shot"><img src="data:image/png;base64,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" alt="The norns screen" width="384" style="image-rendering:pixelated;border-radius:4px;max-width:100%"><div class="oled-cap">TAPE, with two keys playing.</div></div>
+      <ul>
+        <li>The little dragon chomps when you play a note, puts headphones on when you record, bobs along when something's playing and gets sleepy before the screensaver.</li>
+        <li>The top row is what's loaded and where the switch is. Under it are the firmware, the input, the effects order and the looper.</li>
+        <li>The six knobs are Pitch, Start, End, Magic, Transport and Volume. Their rings light up like CHOMPI's knob lights, and a mark on the side means a knob is on page 2 or 3.</li>
+        <li>The keyboard lights up like the OMX keys.</li>
+      </ul>
     </div>
   </section>
 
@@ -169,13 +165,10 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
     <div class="cols">
       <div style="display:grid;gap:10px">
         <p>Each knob does two or three things, called pages. Hold <b>PUSH</b> (the leftmost bottom key, or <b>K1</b>) and nudge a pot to go to its next page.</p>
-        <p>A pot won't do anything until you sweep it past where the knob is set, then it takes over.</p>
+        <p>A pot won't do anything until you sweep it past where the knob is set, then it takes over. The norns shows the knob up close while you turn it, with a dot where the pot is.</p>
+        <p>Pitch is a little sticky at normal speed, so it's easy to get back to.</p>
       </div>
-      <div class="oled big" aria-label="OMX screen showing the filter, the pot not yet picked up">
-          <div class="row" style="top:4px;font-size:24px"><span>FILTER</span><span>HIGH 30</span></div>
-          <div class="bar" style="top:57px;height:36px"><div class="fill" style="width:65%"></div><div style="position:absolute;left:calc(50% - 3px);top:0;bottom:0;width:6px;background:var(--oled-bg)"></div><div style="position:absolute;left:21%;top:-2px;bottom:-2px;width:9px;background:var(--oled-bg)"></div><div style="position:absolute;left:calc(21% + 3px);top:-2px;bottom:-2px;width:3px;background:var(--oled-ink)"></div></div>
-        </div>
-        <div class="oled-cap">Turning Magic on its filter page. The thin line is where the pot is.</div>
+      <div class="shot"><img src="data:image/png;base64,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" alt="Turning the Pitch knob" width="384" style="image-rendering:pixelated;border-radius:4px;max-width:100%"><div class="oled-cap">Turning Pitch. The dot on the ring is the pot, still to be picked up.</div></div>
     </div>
     <div class="scroll">
       <table>
@@ -194,18 +187,8 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
 
   <section>
     <h2>Playing samples</h2>
-    <div class="cols">
-      <div style="display:grid;gap:10px">
-        <p>In JAMMI you play one sample across the keyboard. In CUBBI every white key has its own sample.</p>
-        <p>To pick a sample, hold <b>AUX</b> and press a white key. Keys 1-14 are the samples in the bank and key 15 is your own recording.</p>
-      </div>
-      <div class="oled big" aria-label="OMX screen at rest">
-          <div class="row" style="top:4px;font-size:24px"><span>A RAM</span><span></span></div>
-          <div style="position:absolute;left:8px;top:57px;width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-left:30px solid var(--oled-ink)"></div>
-          <div class="bar" style="top:57px;height:36px;left:54px"><div class="fill" style="width:40%"></div></div>
-        </div>
-        <div class="oled-cap">The OMX screen at rest. ▶ is the looper playing.</div>
-    </div>
+    <p>In JAMMI you play one sample across the keyboard. In CUBBI every white key has its own sample.</p>
+    <p>To pick a sample, hold <b>AUX</b> and press a white key. Keys 1-14 are the samples in the bank and key 15 is your own recording.</p>
   </section>
 
   <section>
@@ -239,10 +222,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
         <li><b>Volume</b> sets the compressor.</li>
         <li><b>K2</b> and <b>K3</b> set the overdub level.</li>
       </ul>
-      <div class="oled big" aria-label="OMX screen with shift held">
-          <div class="row" style="top:4px;font-size:24px"><span>SHIFT</span><span>JAMMI A</span></div>
-        </div>
-        <div class="oled-cap">Holding AUX.</div>
+      <div class="shot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYAAAADACAIAAACCiiMwAAAG0UlEQVR42u3d63HUShCAUadACsRCCk6BFMiJ4EjB/IEtqqY8jKZ7XtL5ftprYal7z73W+vH2JkmSJEl6WL/+FnxMSx8akB0WgAAEIAlAAJIOcqeCS8tjuEMiCUACkAAEIADp0N6Lso78M7vdAGr51yufT+XBLQcMPgZAibVclkuP6Vut4EKumSmAAAQgAAEIQAAC0GMAem9ogjvlyWdJNMGd4IPT3xV8MIASJWrRYcmS9KkXfMYBCEAAAhCAAAQgAD0ZoPeu0gGqfIpZt4eW3APqe34GFyhLKwDtA9CEt2QBdO3IAAIQgAAEIAABCEAA6m0tQOWDZ7pz6Z6Le0BPUKbv1e70F9TTmAAQgAAEIAABCEAAAtDbwCMvAWjcN0lv8g3QE74TGkD7SNT3JFwLUPpMOw8IIAABCEAAAhCAAHR3gDa5BzTh51Q/NPe2l/T/ACQACUAAApDUS1Ll96WudQdAABKAAAQgCUACkM7qhcvreV6+Jb3XQlfekv7qoLgjAAEIQBKABCDt484md3MkAQhAkgAk6TZlCfKjIe5IApAkAAFI4s5od0gkCUCSAAQgiTufPfMBJAlAkgAEIEm5AFV+oc8libgjCUCSAAQgSe0SXXqwHz2VBCBJAAKQpGlaBdlyJSUBSBKAJAlAkgAkSQCSJEmSJEmSJEmSJEmSJEmStGffb9GTT9BwneDB22uEADJcJwggIwSQ4T7mBF/v+7hF5akGn7rbfqWc/uATz932Hr+9RgggANleABkhgAAEoIu9jmOE9cordleAss50HECVT9X2AghAAAIQgAAEIADZ3nPvAWXt6NoRXlrfvs3eFqDglC9dzLUA9W1vy0eN296+hQz+P0TwagAIQAACEIAABCAAAWjEPaC+p27W1+dZAAUZDWq1G0Dpb9n/HlDWGo/b3j4dJoy78i4AAQhAAAIQgAAEIAABCEAASlzj4Mv5wXtA6fc0AQQgAAEIQAACEIAAdARAE77a3ORl+KzXOPd/GT59I3d7GT4I0CYvw2d9x0DWs3LNy/AAAhCAAAQgAAEIQA8GaEl+H1AiQPufu98HtLzoHUwAAQhAthdAAAIQgAB0pjsAAhCAAGSEAAIQgAAEIAAB6AiAyvf5027+MKHhOkF/GdUIAWS4ADJCABmuE1y3vZIkSZKk5HwV7R6Q4TpBN6GNEECGCyAjBJDhOsHRJ3izV8jK03m95a7fLHvpatx1uE7w0BMEEIA8P50ggAAEIM9PAAFoYa/PGUCenwACEIA8P50ggAAEIAAB6N/Sf9t+5cjjAEo/weCfBmk5chCgCfMa9+C+52ffv5W+8y3vyjrB4FkEz6vzr2IACEAAAhCAAAQgAAGoDaBL65v+UVkAXRpGcHJL7gH1nUXWEyzocuXDK1cj+N+A4NNyAkBZ/7VLP9Nr8wIQgAAEIAABCEAAAtBIgIJfqB8EUPC+wziA0m9OZd3b6lvfJwPUd1WDpgSfuQACEIAABCAAAQhAAFr1Mvw4iTZ5Gb7vyC3PxiUvwwcvVPDbFE58Gb7vo4L3gMYtdtYzF0AAAhCAAAQgAAEIQCPuAa0t6x7Qtvlh1FU/q5m18+PuAZ04QQABCEAAAhCAAAQgAAEIQABK3Pngq9QAAhCAAAQgAAEIQAC6H0Dl+/xpN3+Y0HCdoL+MaoQAMlwAGSGADNcJrtteSZIkSZIkSZIkSX/68nlLjnPX83J9zH2H6wMgi+j6mDuALKLr47wANKJvn9dyXSpX6uvfso5TVjmvlo/a5LyWXB9zN/f/BiCLCCBzB5BFBJC5A2iOOwctYvlPXHrw7Rex/CfM3dw7ApBFBJC5A8giAsjcAQQgiwggcweQRQSQuQMIQBYRQOYOIIsIIHMHEIAsIoDMHUAWEUDmDiAAWURzN3cAWUQAmTuALKJFNHdzB5BFBJC5A8giWkRzBxCALCKAzB1AFhFA5g4gAFlEAJk7gCwigMwdQACyiAAydwBZRACZO4AAZBEBZO63B6jlSpUPLq9C8Djpi7jJec28PuZu7gCyiAAydwBZRIto7uZ+EECXqlzovuOMW8S15zXz+pi7uQPIIgLI3AFkES2iuZv7tgC1fEJfYznO5OOYu7kDyAIByHEAZBEtormbO4AcB0COAyCLaBHN3dwB5DgAchwAWUSLaO7mDiDHAZDjAMgiWkTXGUAAchwAOQ6ADB5ArjOAAOQ4AHIcABk8gFxnAAHIcQDkOAAyeACZF4AA5Djmbu4AskAAMi8AWUSLaO7mDiALBCDHAZBFtIjmbu4AchwAOc5DAOr7zIK/o7+8Lo6z6jjmbu4r3bGIFtHczR1AjgMgx7kVQL8BLHaOE2tifMkAAAAASUVORK5CYII=" alt="Holding AUX" width="384" style="image-rendering:pixelated;border-radius:4px;max-width:100%"><div class="oled-cap">Holding AUX. The lit chips are what's chosen now.</div></div>
     </div>
   </section>
 
@@ -268,15 +248,21 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
 
   <section>
     <h2>The OMX screen</h2>
-    <p>The little screen shows your knobs as five bars, one per pot. It changes to the sample window when you turn <b>Start</b> or <b>End</b>, and to the levels when you record. Tap <b>PUSH</b> to pick what it shows the rest of the time: knobs, levels, the sample window or the beat.</p>
+    <p>The little screen shows your knobs as five bars, one per pot, with a box when a knob is on page 2 or 3. It switches to the sample window when you turn <b>Start</b> or <b>End</b>, and to the levels when you record. Tap <b>PUSH</b> to pick what it shows the rest of the time.</p>
+    <div class="shots">
+      <div class="shot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYAAAABgCAIAAACbljLeAAACtElEQVR42u3dwYmAQBAEQD+CmP/f4AxEI1CQZWdnnQIDuKZ7Cu4EbznO60/Puu1Pj6SSSpot6aJCSSWVFEAqlFTSwgC9hM//fKpQUkklTZIUQJJKKimAVCippAAqVeGMvzM7S50CyFiNVac6BZCxAkinADJWY9WpTgFkrADSKYCM1Vh1qlMA9Rhr409orDrVKYCMVac6BZCxGqtOAWSsxqpTnQLIWI1VpwAyVmPVqU4jAarzRZUhr2wb52usOvVBMgABCEAAAhCAAAQgAAHIWHWqUwAZK4B0CiBjNVad6hRAwWNN+8pWpzoFkLEaq051CiBj1alOAWSsxqpTnQLIWHWqUwAZq7HqFEDGGvPy1Vi9htcpgACkUwABCEDGCiAAGSuAAAQgAAHIWAEEIGMFEIAABKApAAr4oKexdk065JOsQ5ICCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIADlzAUgSQEEIAA5S0kBBCBnKSmAAAQgZykpgADkLCUFEIAA5CwlBVDx/5juLCUFEIAA5CwlBRCAnKWkAAIQgJylpAACkLOUFEAAApCzBBCAAOQsJQUQgAAEIAABCEDOUlIAAQhAkgIIQABylpICCEDOUlIAAQhAzlJSAAHIWUoKIAAByFlKCiAA6VSnADJWY9WpTgFkrDrVKYCM1Vj9ZURSAAHIWUoKIAAByFkCCEAA0qlOAWSsxqpTABmrsepUpwAyVmOVFEAAApCzlBRAAAKQpAACEICcpaQAApCzlBRAAAKQs5QUQMYqqaQAUqGkkkoKIGOVVFIAqVBSSSUFkLFKKimAVCippJICSFJJJQWQCiWVFEAqlFRSSQGkQkklBZAKJZVUUgCpUFJJAaRCSSWVFEAqlFRSAKlQUkklBZAKJZUUQCqUVFJJAWSskko6T9IbZjOlWbmTqSIAAAAASUVORK5CYII=" alt="Knobs" width="384" style="image-rendering:pixelated;border-radius:4px;max-width:100%"><div class="oled-cap">Knobs. A line in a bar is a pot that hasn't taken over yet.</div></div>
+      <div class="shot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYAAAABgCAIAAACbljLeAAAB+klEQVR42u3csQ2FMAxAQRokxP49wzEIjICIjJ2Qk14Lxf/2NRFZ1m2XpJIWP4EkAEkCkJ46zktSSAACkAQgAEkAEoD6zxD+ZokABCAACUAAEoAmBChqAtqmZMTZsv8AEoAABCABCEACkAAEIAAJQAASgAQgAAFIIx7DR1HyHVsAApAABCABSAACEIAEIAAJQAIQgAAkAAFIAFIVQFFIAUgAAhCAAAQgAQhAALLDAAKQACQAAQhAAhCABCD1DJBjeAFIAAIQgAQgAAlAAAIQgAAkAAFIAAIQgAAEIOUA5EpWAAFIAAKQAAQgAAEIQAIQgAQgAAEIQAASgAAkAM1wDC8ASTkBCEASgAAkAUiS0gKQJABJApAkAUgSgCQJQJIAJEkAkgQgSQKQJABJEoC+yweEko9RASQBCECSAAQgaZS7awEEIAEIQACSAPR2wdoWNeqp2j/DWAtAAAKQBCAASQACEIAkAAFIAhCAACQA9Q9QJhO1bAFIAAIQgCQAAQhAAhCAACQBCEAAEoAABCAJQAACkAAEIABJAAIQgAQgAAFIAhCAJAABCEASgAAkAQhAAJIABCAJQAACkAAEIABJAAIQgASgGa5krX0zgCQAAUgCEIAAJAABCEASgAAEIAEIQACSACQASfkBCEASgAAkAUiS0gKQJABJmq8bdIUk8e8/4rsAAAAASUVORK5CYII=" alt="Levels" width="384" style="image-rendering:pixelated;border-radius:4px;max-width:100%"><div class="oled-cap">Levels, in and out.</div></div>
+      <div class="shot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYAAAABgCAIAAACbljLeAAACS0lEQVR42u3cQQrCMBBA0W4E8f77Hs6D6AFcWNJkksw8+FtL2okPJOrxeL4kaUqHRyAJQJIAJEkAkgQgSQKQJABJEoAk7Q/Q+f787fdlV17VduX163UX455zrzVHrrBtPePuK/I6UzbtIkMBEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAFoHEC9tl2dg8NezyfyzTOOrUjaVpvOsu+CjYYCIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAALQ+gBlPXTPClAkUgBKcwwPIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAJQeoDS/3ivIECO4R3Db3MMDyAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACkGP4rUga95z9JeusCSY7hu9+ZQABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgCIBkqSYACQJQJIAJEkAkgQgSQKQJABJEoAkAWjKtzmNTbm/Ug8g45HscAABSAACkPFIdjiAACQAAch4JDv8PkBt/+ciSfcDkCQASaoMkE/Ikh0efKcAkuxwABmPAASgLRYt5Q5AAJIABCAACUAAApAEIABJAAIQgCQAAUgCEIAAJAEIQBKAAAQgCUAAkgAEIABJAAKQBCAAAUgCEIAkAAEIQBKAACQBCEAAEoAABCAJQAACkAAEIABJAAKQBCAAAUgCEIAkAAEIQBKAACQBCEAAkgAEIAlAAAKQBCAASQACUNui049HNQOQ8Uh2OIAAJACVAkiSggOQJABJqtcX9QAttUsjsfsAAAAASUVORK5CYII=" alt="Sample window" width="384" style="image-rendering:pixelated;border-radius:4px;max-width:100%"><div class="oled-cap">The sample window, between Start and End.</div></div>
+      <div class="shot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYAAAABgCAIAAACbljLeAAACTUlEQVR42u3cQQrCMBBA0W4KxfvvezgP0h6hQSeTSfPgL20Io3kgQbf9+EjSkDYjkAQgSQCSJABJApAkAUgSgCQJQJLmB+j8Xo+1LBS1TubKkgAEIAlAAJIEIACF1zLDzOpv1VRztgogADkqAAIQgAAEoAUBatnrb6+JOir9nloQoPrbmBGgiaZabasAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIADVB6jf1SaAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAFT5Gn7sygACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACkL9kBRCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAtCbABKAAAQgAAlAAAKQAAQgAAFIAAIQgAQgAAEIQAIQgAAkAAEIQAASgAAEIAEIQAACkAAEIAAJQAACEIAABCAAAUgAAhCAAAQgAAEIQAIQgAAkAAEIQAASgAAEIAEIQAACkALf+ImOt6kGTrXsVgEEIAABCEByVEx1QYASviEnrBz1AUKVlBmAACQBCEASgAAkCUAAkgAEIEmZAEUd3cyV+z0lCUAAkgAEIEkAApAEIABJAhCAJNfwowDKJFISgAAkAQhAkgAEIAlAAJIEIABJruH9GLVC1f6RE/0CEIAAJAABCEAAAhCAAAQgAQhAABKAAAQgAGm1a3gAAUgAAhCAACQAAQhAAhCAAAQgAQhAABKAAAQgAOl/gIxAEoAkAUiSACQJQJIEIEmv6wZvDdMBAt7Q/QAAAABJRU5ErkJggg==" alt="Beat" width="384" style="image-rendering:pixelated;border-radius:4px;max-width:100%"><div class="oled-cap">The beat and tempo, in TEMPO and WAVE.</div></div>
+    </div>
   </section>
 
   <section>
     <h2>Settings</h2>
     <p>These are in <b>PARAMETERS &gt; EDIT</b>:</p>
     <ul>
-      <li><b>firmware</b>: TAPE, TEMPO or WAVE.</li>
-      <li><b>screensaver after</b>: how long before the dragon comes out.</li>
+      <li><b>firmware</b>: TAPE, TEMPO or WAVE. Each one carries on where you left it.</li>
+      <li><b>screensaver after</b>: how long before the big dragon comes out.</li>
       <li><b>midi out to</b> and <b>midi in from</b>.</li>
       <li><b>tape</b>, <b>tempo</b> and <b>wave options</b>: CHOMPI's own settings. These take effect when you restart the norns.</li>
     </ul>
@@ -310,7 +296,7 @@ th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: 0.08
           <tr><td><b>K2</b></td><td>starts and stops the sequencer</td></tr>
           <tr><td><b>K3</b></td><td>records steps as you play. Hold it to delete the last one</td></tr>
           <tr><td><b>Encoder</b></td><td>tempo. Push to tap it</td></tr>
-          <tr><td><b>Pitch</b></td><td>tuning, and on page 2 the wavetable position</td></tr>
+          <tr><td><b>Pitch</b></td><td>tuning, and on page 2 the wavetable position. Tuning is a little sticky in the middle</td></tr>
           <tr><td><b>AUX</b> + top keys</td><td>octave down and up, gate length, the two LFOs, erase, copy, save</td></tr>
           <tr><td><b>AUX</b> + white keys</td><td>load presets 1-14</td></tr>
         </tbody>
