@@ -153,8 +153,11 @@ function surf.frame(st)
     else
       local r, g, b
       if st.saver then r, g, b = st.saver_key(k) else r, g, b = st.key(k) end
-      -- its keys have one colour: CHOMPI's light as a brightness, 0-127
+      -- its keys have one colour: CHOMPI's light as a brightness, 0-127.
+      -- CHOMPI lights its shift menu at full strength in colour, which as
+      -- white outshines the rest, so the menu is a third as bright.
       v = math.floor(math.max(r, g, b) / 2)
+      if st.menu then v = math.floor(v * 0.33) end
     end
     if sent[k] ~= v then
       sent[k] = v
