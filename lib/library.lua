@@ -40,12 +40,22 @@ local function capture(cmd)
   return s
 end
 
--- The first partition of the first USB disk, or the disk itself if it has none.
+-- The first partition of the first USB disk, or the disk itself if it has
+-- none. An RP2040's update drive (an OMX-27 being updated) isn't a stick.
 local function find_device()
+  local devs = capture("ls /dev/sd[a-z]* 2>/dev/null")
+  local skip = {}
+  for d in devs:gmatch("[^\n]+") do
+    if capture("lsblk -no LABEL " .. d .. " 2>/dev/null"):find("RPI%-RP2") then
+      skip[d:match("^/dev/(sd[a-z])")] = true
+    end
+  end
   local disk, part
-  for d in capture("ls /dev/sd[a-z]* 2>/dev/null"):gmatch("[^\n]+") do
-    if d:match("^/dev/sd[a-z]$") then disk = disk or d
-    elseif d:match("^/dev/sd[a-z]%d+$") then part = part or d end
+  for d in devs:gmatch("[^\n]+") do
+    if not skip[d:match("^/dev/(sd[a-z])")] then
+      if d:match("^/dev/sd[a-z]$") then disk = disk or d
+      elseif d:match("^/dev/sd[a-z]%d+$") then part = part or d end
+    end
   end
   return part or disk
 end

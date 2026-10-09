@@ -88,8 +88,9 @@ function up.start(found, done)
       "[ -e /dev/disk/by-label/RPI-RP2 ] || { say 'hold BOOTSEL on the OMX-27 while plugging it in'; for i in $(seq 1 120); do [ -e /dev/disk/by-label/RPI-RP2 ] && break; sleep 0.5; done; }",
       "say 'writing the firmware'",
       "sudo mkdir -p /mnt/omx27",
-      "sudo mount /dev/disk/by-label/RPI-RP2 /mnt/omx27",
-      "sudo cp " .. file .. " /mnt/omx27/ && sync",
+      "sudo mount -o rw /dev/disk/by-label/RPI-RP2 /mnt/omx27",
+      "sudo cp " .. file .. " /mnt/omx27/",
+      "sync",
       "sudo umount /mnt/omx27 || true",
     }) do lines[#lines + 1] = l end
   else

@@ -13,6 +13,7 @@ local EVENTS = {[0] = "up", "down", "hold", "quick"}
 omx.old_firmware = function(version) end
 local MIN_VERSION = {1, 15, 4}
 local version_reply = nil
+local connecting = nil -- counts connects, so only the latest acts
 
 -- callbacks, set by the script
 omx.key = function(n, ev) end -- n 0-26 (0 is AUX), ev "down" "up" "hold" "quick"
@@ -101,12 +102,18 @@ function omx.connect()
       last_chunks = {}
       frame_pending = false
       version_reply = nil
-      send(0x1F)
+      -- a newer connect (it was plugged in again) takes over from this one
+      connecting = (connecting or 0) + 1
+      local mine = connecting
       clock.run(function()
-        for _ = 1, 15 do
+        -- ask until it answers: one just plugged in takes a few seconds to
+        -- start up before it does
+        for i = 0, 59 do
+          if i % 5 == 0 then send(0x1F) end
           clock.sleep(0.1)
-          if version_reply then break end
+          if version_reply or mine ~= connecting or not dev then break end
         end
+        if mine ~= connecting or not dev then return end
         if new_enough(version_reply) then
           send(0x51, {0x05, MODE_REMOTE})
           -- everything again in full, now that it's listening
