@@ -38,7 +38,7 @@ end
 
 -- The OMX-27 on USB: {board = "rp2040" | "teensy40" | "teensy32" | nil, tty}.
 -- A Teensy's model comes from its bcdDevice (Teensyduino: 0x0275 for 3.2,
--- 0x0280 for 4.0).
+-- 0x0279 for 4.0).
 function up.find()
   local p = io.popen("ls -d /sys/bus/usb/devices/*-* 2>/dev/null")
   local list = p:read("a")
@@ -51,8 +51,7 @@ function up.find()
       board = "rp2040"
     elseif vendor == "16c0" then
       local bcd = read(d .. "/bcdDevice") or ""
-      board = bcd == "0275" and "teensy32" or "teensy40"
-      if bcd ~= "0275" and bcd ~= "0280" then board = nil end
+      board = ({["0275"] = "teensy32", ["0279"] = "teensy40"})[bcd]
     end
     if vendor == "2e8a" or vendor == "16c0" then
       local t = io.popen("ls " .. d .. "/*/tty 2>/dev/null")

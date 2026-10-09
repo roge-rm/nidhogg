@@ -118,7 +118,9 @@ end
 -- True if a device name is an OMX-27 (any board).
 -- RP2040 units are "omx-27-v3"; Teensy units keep Teensyduino's "Teensy MIDI".
 function omx.is_omx(name)
-  return name ~= nil and (name:find("omx%-27") ~= nil or name:find("Teensy MIDI") ~= nil)
+  if name == nil then return false end
+  name = name:lower()
+  return name:find("omx") ~= nil or name:find("teensy midi") ~= nil
 end
 
 -- The OMX-27 was unplugged: forget it without sending anything.
