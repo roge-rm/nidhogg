@@ -107,9 +107,10 @@ function omx.connect()
       connecting = (connecting or 0) + 1
       local mine = connecting
       clock.run(function()
-        -- ask until it answers: one just plugged in takes a few seconds to
-        -- start up before it does
-        for i = 0, 59 do
+        -- ask until it answers: one just switched on can take over 6 s to
+        -- start up before it does. Old firmware never answers, so a long wait
+        -- only delays the update prompt.
+        for i = 0, 199 do
           if i % 5 == 0 then send(0x1F) end
           clock.sleep(0.1)
           if version_reply or mine ~= connecting or not dev then break end
