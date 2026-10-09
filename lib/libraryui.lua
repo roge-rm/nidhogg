@@ -23,6 +23,26 @@ local function fit(text, w)
   return "..." .. text
 end
 
+-- The selected name, scrolled so all of it can be read: it waits at the
+-- start, moves a character at a time until the end shows, waits, and starts
+-- over. A newly selected name starts from the beginning.
+local WAIT, STEP = 1.2, 0.15
+local shown = {text = nil, since = 0}
+
+local function scrolled(text, w)
+  if screen.text_extents(text) <= w then return text end
+  if shown.text ~= text then shown.text, shown.since = text, util.time() end
+  -- characters to drop before the end fits
+  local last = 1
+  while last < #text and screen.text_extents(text:sub(last)) > w do last = last + 1 end
+  local period = WAIT + (last - 1) * STEP + WAIT
+  local t = (util.time() - shown.since) % period
+  local i = util.clamp(math.floor((t - WAIT) / STEP) + 1, 1, last)
+  local out = text:sub(i)
+  while #out > 1 and screen.text_extents(out) > w do out = out:sub(1, -2) end
+  return out
+end
+
 local function right(x, y, text)
   screen.move(x, y)
   screen.text_right(text)
@@ -286,7 +306,8 @@ local function row(i, y, selected, tick, name, tag, dim)
   end
   screen.move(tick ~= nil and 10 or 2, y)
   local tw = tag and screen.text_extents(tag) or 0
-  screen.text(fit(name, 116 - tw - (tick ~= nil and 10 or 2)))
+  local w = 116 - tw - (tick ~= nil and 10 or 2)
+  screen.text(selected and scrolled(name, w) or fit(name, w))
   if tag then right(127, y, tag) end
 end
 
@@ -495,7 +516,7 @@ local function draw_slots()
     screen.move(2, y)
     screen.text(tostring(i))
     screen.move(16, y)
-    screen.text(fit(name, 110))
+    screen.text(i == s.scursor and scrolled(name, 110) or fit(name, 110))
   end
   screen.level(4)
   screen.move(2, 63)
@@ -531,7 +552,7 @@ local function draw_library()
       if slot_changes(b) > 0 then tag = string.format("%d slot%s", slot_changes(b), slot_changes(b) == 1 and "" or "s") end
       if changed then tag = "* " .. tag end
       screen.level(i == s.cursor and 15 or (changed and 10 or 4))
-      right(127, y, fit(tag, 80))
+      right(127, y, i == s.cursor and scrolled(tag, 80) or fit(tag, 80))
     else
       screen.level(i == s.cursor and 15 or (#c > 0 and 6 or 3))
       screen.move(64, y)
