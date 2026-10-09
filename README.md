@@ -37,7 +37,7 @@ Dan
 - An OMX-27 plugged into the norns by USB, any of the three boards, or one of the [other controllers](#other-controllers).
 - About 200 MB free, and wifi the first time.
 
-The OMX-27 needs Quixotic7's firmware, 1.15.4 or newer. If it has something older nidhogg offers to update it: press **K3** to update or **K2** to skip. Updating clears the OMX-27's saved patterns. On a Teensy unit you may need to press the button on the Teensy when the screen asks.
+The OMX-27 needs Quixotic7's firmware, 1.15.4 or newer. If it has something older nidhogg offers to update it: press **K3** to update or **K2** to skip. Updating clears the OMX-27's saved patterns. On a Teensy unit you may need to press the button on the Teensy when the screen asks. To update or repair one any time, use **update OMX-27** in **PARAMETERS > EDIT**.
 
 ## Installing
 
