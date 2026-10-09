@@ -42,6 +42,7 @@ S.kinds = {
   include("lib/surfaces/omx27"),
   include("lib/surfaces/exquis"),
   include("lib/surfaces/launchpad"),
+  include("lib/surfaces/qunexus"),
 }
 
 -- Set by the script. k is a CHOMPI key 0-24, z 1 down or 0 up, knob 0-5
@@ -61,6 +62,7 @@ S.actions = {
   pot = function(knob, pos) end, -- absolute, 0-1, for controllers with fixed pots
   push_hold = function(who, held) end, -- a key that makes pots push their knobs
   touch = function() end,      -- anything played, for the screensaver
+  midi = function(data) end,   -- MIDI into CHOMPI, as from "midi in from"
 }
 
 -- CHOMPI's keys, C3 to C5: k -> the firmware's switch id and key light.

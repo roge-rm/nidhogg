@@ -28,6 +28,7 @@ local switch_firmware
 -- set when the OMX-27's firmware is too old: {version, found, board, state}
 local update_prompt = nil
 local detent
+local midi_in -- MIDI from a keyboard into CHOMPI (below)
 local SW = {PLAY = 33, LOOP = 34}
 local ENC = {TRANSPORT = 4, VOLUME = 5} -- hardware encoders SW5, SW6
 
@@ -206,6 +207,7 @@ local function start_surfaces()
   end
   a.push = function(knob, z) send("/push", {KNOB_TO_ENC[knob], z}) end
   a.push_hold = function(who, held) push_hold(who, held) end
+  a.midi = function(data) midi_in(data) end
   a.pot = function(knob, raw)
     local pos = detent(knob, raw)
     -- a jittering pot shouldn't keep the screensaver away: only count it once
@@ -274,7 +276,7 @@ local function pressure(ch, v)
   send("/midi", {"usb", 0xB0 | chompi_channel(), 20 + knob, math.floor(value * 127 + 0.5)})
 end
 
-local function midi_in(data)
+midi_in = function(data)
   local status = data[1]
   if status and status >= 0x80 and status < 0xF0 then
     local kind, ch = status & 0xF0, status & 0x0F
