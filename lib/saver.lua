@@ -22,6 +22,8 @@ local gap = 1
 
 function saver.touch()
   last_input = util.time()
+  -- norns blanks its screen after 15 min without its own keys or encoders
+  screen.ping()
 end
 
 function saver.active()

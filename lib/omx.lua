@@ -21,6 +21,8 @@ omx.enc_btn = function(z) end
 omx.pot = function(n, v, hires) end -- n 0-4, v 0-127, hires 0-16383
 
 local dev
+-- true once the OMX has been asked into REMOTE; it ignores LEDs and frames before that
+local remote = false
 local rx = {}
 local leds, shown = {}, {}
 
@@ -94,6 +96,7 @@ function omx.connect()
     if v.device and omx.is_omx(v.name) then
       dev = midi.connect(i)
       dev.event = on_midi
+      remote = false
       for n = 0, 26 do leds[n] = {0, 0, 0}; shown[n] = {-1, -1, -1} end
       last_chunks = {}
       frame_pending = false
@@ -106,6 +109,11 @@ function omx.connect()
         end
         if new_enough(version_reply) then
           send(0x51, {0x05, MODE_REMOTE})
+          -- everything again in full, now that it's listening
+          for n = 0, 26 do shown[n] = {-1, -1, -1} end
+          last_chunks = {}
+          frame_pending = false
+          remote = true
         else
           omx.old_firmware(version_reply)
         end
@@ -128,6 +136,7 @@ end
 function omx.lost()
   if dev then dev.event = nil end
   dev = nil
+  remote = false
   frame_pending = false
 end
 
@@ -136,6 +145,7 @@ function omx.disconnect()
     send(0x51, {0x05, MODE_MI})
     dev.event = nil
     dev = nil
+    remote = false
   end
 end
 
@@ -146,7 +156,7 @@ end
 
 -- Sends the LEDs that changed since the last call.
 function omx.led_show()
-  if not dev then return end
+  if not dev or not remote then return end
   local payload, any = {0, 27}, false
   for n = 0, 26 do
     local c, s = leds[n], shown[n]
@@ -187,7 +197,7 @@ end
 -- Pixels at level 8 or above are lit. Returns false if the last frame isn't
 -- shown yet, so drawing can never run ahead of the OMX.
 function omx.screen_send(x, y)
-  if not dev then return false end
+  if not dev or not remote then return false end
   if frame_pending and util.time() - frame_sent_at < 0.25 then return false end
   local px = screen.peek(x or 0, y or 0, 128, 32)
   if not px then return false end
