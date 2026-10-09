@@ -1,0 +1,30 @@
+--- a/chompi_main.cpp
++++ b/chompi_main.cpp
+@@ -536,4 +536,27 @@
+     *out = fx.getVUSample();
+ }
+ uint32_t nidhogg_clock_ticks() { return nidhogg_ticks; }
++// Positions of the selected engine's playing voices, 0-1 through the sample
++// (or the slice); returns how many.
++template <typename V>
++static float nidhogg_voice_pos(V& v)
++{
++    const size_t size = v.player_.num_samples_;
++    return size ? v.player_.phaseAccumulator / float(size) : 0.f;
++}
++int nidhogg_playheads(float* pos, int max)
++{
++    int n = 0;
++    for(size_t i = 0; i < NUM_VOICES && n < max; i++)
++    {
++        if(fx.getEngine() == 0)
++        {
++            if(sEngine.myVoices[i].amp_env.IsRunning())
++                pos[n++] = nidhogg_voice_pos(sEngine.myVoices[i]);
++        }
++        else if(slice.myVoices[i].amp_env_.IsRunning())
++            pos[n++] = nidhogg_voice_pos(slice.myVoices[i]);
++    }
++    return n;
++}
+ #endif

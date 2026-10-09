@@ -11,6 +11,7 @@ bool  nidhogg_pitch_quantized();
 bool  nidhogg_ready();
 void  nidhogg_meters(float* in, float* out);
 uint32_t nidhogg_clock_ticks();
+int   nidhogg_playheads(float* pos, int max);
 void  nidhogg_state(int* s);
 
 void board_firmware_attach()
@@ -54,6 +55,7 @@ Status status()
     }
     nidhogg_meters(&st.meter_in, &st.meter_out);
     st.clock_ticks = nidhogg_clock_ticks();
+    st.playheads   = nidhogg_playheads(st.playhead, 8);
     st.menu = nidhogg_menu_active();
     nidhogg_state(st.state);
     return st;

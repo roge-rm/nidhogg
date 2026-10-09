@@ -169,12 +169,14 @@ local function omx_window(s, M)
   screen.rect(x0 - 1, 16, 1, 16)
   screen.rect(x1, 16, 1, 16)
   screen.fill()
-  -- a gap in the bar where each voice is playing
+  -- a gap in the bar where each voice is playing; one held at the end is done
   for _, p in ipairs(s.playheads or {}) do
-    local x = math.floor(p * 125 + 1.5)
-    screen.level(x >= x0 and x < x1 and 0 or 15)
-    screen.rect(x, 20, 1, 10)
-    screen.fill()
+    if p < 1 then
+      local x = math.floor(p * 125 + 1.5)
+      screen.level(x >= x0 and x < x1 and 0 or 15)
+      screen.rect(x, 20, 1, 10)
+      screen.fill()
+    end
   end
   screen.level(15)
 end
