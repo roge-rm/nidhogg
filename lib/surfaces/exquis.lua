@@ -5,18 +5,20 @@
 --                       lays out notes: semitones to the right, a major third
 --                       up-right, a minor third up-left
 --   encoders 1-4        Pitch, Start, End, Magic; click to push (next page)
---   record button       the CHOMPI key
+--   gear                CHOMPI's shift: the CHOMPI key with the switch on Play
+--   record              record while held: the CHOMPI key with the switch on
+--                       Record (either puts the switch back after)
 --   play, loop          PLAY, LOOP
 --   clips               the Play/Record switch
 --   down, up            Transport a step slower or faster (held, it
 --                       repeats); both together push it (normal speed)
 --   slider              Volume: slide up or down; it shows the volume while
 --                       touched and the output level otherwise
---   settings            PUSH: hold it and turn a knob (or use the arrows or
+--   sound               PUSH: hold it and turn a knob (or use the arrows or
 --                       slider) to push that knob instead (next page)
 --   undo                PLAY and LOOP held together: hold it to clear the
 --                       looper (TAPE) or the sequence (WAVE)
--- Sound and redo do nothing for now. The Exquis has every button back when
+-- Redo does nothing for now. The Exquis has every button back when
 -- nidhogg lets it go.
 
 local surf = {name = "Exquis"}
@@ -36,7 +38,7 @@ end
 local ZONES = 0x3F
 local BTN_RECORD, BTN_LOOP, BTN_CLIPS, BTN_PLAY = 102, 103, 104, 105
 local BTN_DOWN, BTN_UP = 106, 107
-local BTN_SETTINGS, BTN_UNDO = 100, 108
+local BTN_GEAR, BTN_SOUND, BTN_UNDO = 100, 101, 108
 local SLIDER_POS = 90    -- the touched portion, 0-5, or 127 when let go
 local TRANSPORT, VOLUME = 4, 5 -- CHOMPI's knobs
 local SLIDE_STEPS = 3   -- Volume detents per portion slid
@@ -102,6 +104,32 @@ local arrow_push = false -- both were down: Transport is pushed
 local arrow_repeat = nil -- the clock repeating a held arrow
 local slide_at = nil     -- the slider portion touched, or nil
 local undo_held = false
+local record_now = false -- the switch, as of the last frame
+local chompi_held = nil  -- gear or record, while one holds the CHOMPI key
+
+-- The CHOMPI key with the switch set for it: on Play it's shift, on Record it
+-- records. The switch goes back where it was when let go of. The short waits
+-- keep the switch, the key and the switch back in order.
+local function chompi_as(btn, record, z)
+  local a = surf.actions
+  if z == 1 then
+    if chompi_held then return end
+    local was = record_now
+    chompi_held = {btn = btn, was = was}
+    clock.run(function()
+      if was ~= record then a.switch(record); clock.sleep(0.03) end
+      a.chompi(1)
+    end)
+  elseif chompi_held and chompi_held.btn == btn then
+    local was = chompi_held.was
+    chompi_held = nil
+    clock.run(function()
+      clock.sleep(0.05)
+      a.chompi(0)
+      if was ~= record then clock.sleep(0.03); a.switch(was) end
+    end)
+  end
+end
 local in_settings = false -- the Exquis's own settings menu is showing
 local pressed = {}      -- pad -> the key it pressed, so it's let go of the
                         -- same key if the layout changes while it's held
@@ -154,15 +182,17 @@ local function on_event(status, d1, d2)
     elseif d1 >= ENC_BUTTONS and d1 < ENC_BUTTONS + 4 then
       a.touch()
       a.push(d1 - ENC_BUTTONS, z)
+    elseif d1 == BTN_GEAR then
+      a.touch(); chompi_as(BTN_GEAR, false, z)
     elseif d1 == BTN_RECORD then
-      a.touch(); a.chompi(z)
+      a.touch(); chompi_as(BTN_RECORD, true, z)
     elseif d1 == BTN_PLAY then
       a.touch(); a.play(z)
     elseif d1 == BTN_LOOP then
       a.touch(); a.loop(z)
     elseif d1 == BTN_CLIPS and z == 1 then
       a.touch(); a.toggle_switch()
-    elseif d1 == BTN_SETTINGS then
+    elseif d1 == BTN_SOUND then
       a.touch(); a.push_hold("exquis", z == 1)
     elseif d1 == BTN_UNDO then
       a.touch(); a.play(z); a.loop(z)
@@ -231,7 +261,7 @@ function surf.connect()
       dev = midi.connect(i)
       dev.event = on_midi
       sent, down, rx, pressed, in_settings = {}, {}, {}, {}, false
-      arrows, arrow_push, slide_at = {}, false, nil
+      arrows, arrow_push, slide_at, chompi_held = {}, false, nil, nil
       send(sysex(0x00, ZONES))
       return true
     end
@@ -256,6 +286,7 @@ function surf.refresh() sent = {} end
 local function c7(r, g, b) return (r or 0) >> 1, (g or 0) >> 1, (b or 0) >> 1 end
 
 function surf.frame(st)
+  record_now = st.record
   if in_settings then return end
   local want = {} -- LED id -> {r, g, b, fx}
   local function set(id, r, g, b, fx) want[id] = {r, g, b, fx or 0} end
@@ -306,18 +337,20 @@ function surf.frame(st)
       end
     end
     for i = 0, 3 do set(ENCODERS + i, c7(st.light(1 + i))) end
-    set(BTN_RECORD, c7(st.light(0)))
+    -- gear shows the CHOMPI light; record is red, bright while recording
+    set(BTN_GEAR, c7(st.light(0)))
+    if chompi_held and chompi_held.btn == BTN_RECORD then set(BTN_RECORD, 127, 0, 0)
+    else set(BTN_RECORD, 30, 0, 0) end
     set(BTN_PLAY, c7(st.light(7)))
     set(BTN_LOOP, c7(st.light(8)))
     if st.record then set(BTN_CLIPS, 110, 0, 0) else set(BTN_CLIPS, 12, 12, 12) end
     -- PUSH: white while held, amber when a knob is off its first page
-    if st.held then set(BTN_SETTINGS, 110, 110, 110)
-    elseif st.paged then set(BTN_SETTINGS, 110, 50, 0)
-    else set(BTN_SETTINGS, 10, 10, 10) end
+    if st.held then set(BTN_SOUND, 110, 110, 110)
+    elseif st.paged then set(BTN_SOUND, 110, 50, 0)
+    else set(BTN_SOUND, 10, 10, 10) end
     if undo_held then set(BTN_UNDO, 120, 0, 0) else set(BTN_UNDO, 25, 0, 0) end
     set(BTN_DOWN, 10, 10, 10)
     set(BTN_UP, 10, 10, 10)
-    set(101, 0, 0, 0)
     set(109, 0, 0, 0)
     if slide_at then
       -- the volume, in white, while the slider is touched
