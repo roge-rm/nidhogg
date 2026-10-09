@@ -3,7 +3,8 @@
 card format. Run by lib/import.lua on the norns.
 
   import.py scan FW CARD ROOT...
-      Lists packs under each ROOT, one per line: "pack<TAB>name<TAB>source<TAB>count".
+      Lists packs under each ROOT, one per line: "pack<TAB>name<TAB>source<TAB>count",
+      and zips it can't read as "bad<TAB>file<TAB>-<TAB>0".
       A pack is a folder with audio files in it, or such a folder inside a zip;
       source is the folder or "zipfile::folder". Then the targets for firmware
       FW: "target<TAB>id<TAB>label<TAB>samples already there".
@@ -82,6 +83,7 @@ def scan_zip(path):
     try:
         z = zipfile.ZipFile(path)
     except (zipfile.BadZipFile, OSError):
+        print("bad\t%s\t-\t0" % os.path.basename(path))
         return []
     folders = {}
     for n in z.namelist():

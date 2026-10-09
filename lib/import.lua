@@ -35,10 +35,14 @@ local function find_device()
   return part or disk
 end
 
+-- Read-only where possible. norns' usbmount may already have the stick
+-- mounted read-write, out of sight in udev's own namespace, and then only a
+-- mount with the same options is allowed. nidhogg never writes to it either way.
 local function mount(dev)
   os.execute("sudo umount -l " .. imp.MOUNT .. " 2>/dev/null")
   os.execute("sudo mkdir -p " .. imp.MOUNT)
   return os.execute("sudo mount -o ro " .. dev .. " " .. imp.MOUNT .. " 2>/dev/null")
+    or os.execute("sudo mount " .. dev .. " " .. imp.MOUNT .. " 2>/dev/null")
 end
 
 function imp.unmount()
@@ -53,17 +57,23 @@ end
 function imp.watch(on_insert, on_remove)
   os.execute("mkdir -p " .. q(imp.DROP) .. " " .. q(WORK))
   local first = true
+  local failed = nil -- a stick that wouldn't mount, left alone until it's out
   clock.run(function()
     while true do
       local dev = find_device()
-      if dev and dev ~= imp.device then
+      if dev and dev ~= imp.device and dev ~= failed then
         if mount(dev) then
           imp.device = dev
           if not first then on_insert() end
+        else
+          failed = dev
         end
-      elseif not dev and imp.device then
-        imp.unmount()
-        on_remove()
+      elseif not dev then
+        failed = nil
+        if imp.device then
+          imp.unmount()
+          on_remove()
+        end
       end
       first = false
       clock.sleep(2)
@@ -90,21 +100,24 @@ end
 
 -- Finds packs on the stick and in the import folder, and the places firmware
 -- fw can take them. done(packs, targets): packs {name, source, count},
--- targets {id, label, count}, count being the samples already there.
+-- targets {id, label, count}, count being the samples already there, and
+-- bad the zips that couldn't be read.
 function imp.scan(fw, card, done)
   local roots = q(imp.DROP)
   if imp.device then roots = q(imp.MOUNT) .. " " .. roots end
   run("python3 " .. q(PY) .. " scan " .. fw .. " " .. q(card) .. " " .. roots, function(_, out)
-    local packs, targets = {}, {}
+    local packs, targets, bad = {}, {}, {}
     for line in out:gmatch("[^\n]+") do
       local kind, a, b, n = line:match("^(%a+)\t([^\t]*)\t([^\t]*)\t(%d+)$")
-      if kind == "pack" then
+      if kind == "bad" then
+        bad[#bad + 1] = a
+      elseif kind == "pack" then
         packs[#packs + 1] = {name = a, source = b, count = tonumber(n)}
       elseif kind == "target" then
         targets[#targets + 1] = {id = a, label = b, count = tonumber(n)}
       end
     end
-    done(packs, targets)
+    done(packs, targets, bad)
   end)
 end
 

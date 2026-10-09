@@ -474,9 +474,9 @@ open_import = function()
   if importer and importer.state == "working" then return end
   local fw = current_fw()
   importer = {state = "scanning", fw = fw}
-  import.scan(fw, install.card_dir(fw), function(packs, targets)
+  import.scan(fw, install.card_dir(fw), function(packs, targets, bad)
     if not importer or importer.state ~= "scanning" then return end
-    importer.packs, importer.targets = packs, targets
+    importer.packs, importer.targets, importer.bad = packs, targets, bad
     importer.p, importer.t = 1, 1
     for i, t in ipairs(targets) do
       if t.count == 0 then importer.t = i; break end
@@ -525,6 +525,10 @@ local function draw_import()
   line(10, 15, "IMPORT")
   if u.state == "scanning" then
     line(34, 8, "looking for samples")
+  elseif u.state == "empty" and #u.bad > 0 then
+    line(28, 8, "couldn't read " .. fit(u.bad[1]))
+    line(38, 8, "it may not have copied fully")
+    line(58, 15, "K2 back")
   elseif u.state == "empty" then
     line(28, 8, "no samples found on the stick")
     line(38, 8, "or in audio/nidhogg/import")
