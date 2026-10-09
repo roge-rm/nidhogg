@@ -8,6 +8,12 @@ local HEAD = {0xF0, 0x7D, 0x00, 0x00}
 local MODE_MI, MODE_REMOTE = 0, 9
 local EVENTS = {[0] = "up", "down", "hold", "quick"}
 
+-- called with the firmware version {major, minor, point}, or nil if the
+-- OMX-27 didn't answer, when it's too old for REMOTE mode
+omx.old_firmware = function(version) end
+local MIN_VERSION = {1, 15, 4}
+local version_reply = nil
+
 -- callbacks, set by the script
 omx.key = function(n, ev) end -- n 0-26 (0 is AUX), ev "down" "up" "hold" "quick"
 omx.enc = function(d) end
@@ -35,6 +41,11 @@ end
 local function handle(m)
   -- m is a whole sysex message, F0 to F7
   if #m < 7 or m[2] ~= 0x7D then return end
+  if m[5] == 0x0F and m[6] == 0x02 and #m >= 10 then
+    -- the config reply: F0 7D 00 00 0F 02 major minor point ...
+    version_reply = {m[7], m[8], m[9]}
+    return
+  end
   if m[5] == 0x52 then
     if m[6] == 0x04 then frame_pending = false end
     return
@@ -67,15 +78,37 @@ local function on_midi(data)
   end
 end
 
+local function new_enough(v)
+  if not v then return false end
+  for i = 1, 3 do
+    if v[i] ~= MIN_VERSION[i] then return v[i] > MIN_VERSION[i] end
+  end
+  return true
+end
+
+-- Finds the OMX-27, checks its firmware and, if it's new enough, puts it in
+-- REMOTE mode. Too old, or no answer, and omx.old_firmware is called instead.
 function omx.connect()
   for i, v in pairs(midi.vports) do
-    if v.name and v.name:find("omx%-27") then
+    if omx.is_omx(v.name) then
       dev = midi.connect(i)
       dev.event = on_midi
-      send(0x51, {0x05, MODE_REMOTE})
       for n = 0, 26 do leds[n] = {0, 0, 0}; shown[n] = {-1, -1, -1} end
       last_chunks = {}
       frame_pending = false
+      version_reply = nil
+      send(0x1F)
+      clock.run(function()
+        for _ = 1, 15 do
+          clock.sleep(0.1)
+          if version_reply then break end
+        end
+        if new_enough(version_reply) then
+          send(0x51, {0x05, MODE_REMOTE})
+        else
+          omx.old_firmware(version_reply)
+        end
+      end)
       return true
     end
   end
@@ -83,8 +116,9 @@ function omx.connect()
 end
 
 -- True if a device name is an OMX-27 (any board).
+-- RP2040 units are "omx-27-v3"; Teensy units keep Teensyduino's "Teensy MIDI".
 function omx.is_omx(name)
-  return name ~= nil and name:find("omx%-27") ~= nil
+  return name ~= nil and (name:find("omx%-27") ~= nil or name:find("Teensy MIDI") ~= nil)
 end
 
 -- The OMX-27 was unplugged: forget it without sending anything.

@@ -23,9 +23,12 @@ local view = include("lib/view")
 local saver = include("lib/saver")
 local options = include("lib/options")
 local modes = include("lib/modes")
+local omxupdate = include("lib/omxupdate")
 
 local M = modes.tape -- the firmware running now
 local switch_firmware
+-- set when the OMX-27's firmware is too old: {version, found, board, state}
+local update_prompt = nil
 local detent
 local SW = {PLAY = 33, LOOP = 34}
 local ENC = {TRANSPORT = 4, VOLUME = 5} -- hardware encoders SW5, SW6
@@ -210,6 +213,10 @@ local function start_omx()
     send("/pot", {knob, pos})
     focus(knob)
   end
+  omx.old_firmware = function(version)
+    local found = omxupdate.find() or {}
+    update_prompt = {version = version, found = found, board = found.board or "teensy40", state = "ask"}
+  end
   omx.connect()
 
   -- plugged in later, or unplugged and plugged back in
@@ -221,8 +228,9 @@ local function start_omx()
       end)
     end
   end
+  -- norns also calls this again with no device, through the device's metatable
   midi.remove = function(dev)
-    if omx.is_omx(dev.name) then omx.lost() end
+    if dev and omx.is_omx(dev.name) then omx.lost() end
   end
 end
 
@@ -445,8 +453,36 @@ function osc.event(path, args, from)
   end
 end
 
+local function update_key(n, z)
+  if z == 0 then return end
+  local u = update_prompt
+  if u.state == "ask" then
+    if n == 3 then
+      u.state = "updating"
+      local found = {board = u.board, tty = u.found.tty}
+      omxupdate.start(found, function(ok)
+        u.state = ok and "done" or "failed"
+        if ok then
+          clock.run(function()
+            clock.sleep(3)
+            if update_prompt == u then update_prompt = nil end
+          end)
+        end
+      end)
+    elseif n == 2 then
+      update_prompt = nil
+    end
+  elseif u.state == "failed" or u.state == "done" then
+    update_prompt = nil
+  end
+end
+
 function key(n, z)
   saver.touch()
+  if update_prompt then
+    update_key(n, z)
+    return
+  end
   if n == 1 then
     push_hold("k1", z == 1)
   elseif n == 2 then
@@ -458,6 +494,14 @@ end
 
 function enc(n, d)
   saver.touch()
+  if update_prompt then
+    -- a Teensy's model, in case the guess is wrong
+    local u = update_prompt
+    if u.state == "ask" and u.found.teensy and n == 2 then
+      u.board = d > 0 and "teensy40" or "teensy32"
+    end
+    return
+  end
   if n == 1 then
     s.record_switch = d > 0
     send("/switch", {s.record_switch and 1 or 0})
@@ -491,6 +535,42 @@ function redraw()
     screen.update()
     return
   end
+  if update_prompt then
+    local u = update_prompt
+    local names = {rp2040 = "RP2040 (v3)", teensy40 = "Teensy 4.0 (v2)", teensy32 = "Teensy 3.2 (v1)"}
+    screen.level(15)
+    screen.move(64, 10)
+    screen.text_center("OMX-27 firmware")
+    screen.level(8)
+    screen.move(64, 21)
+    if u.version then
+      screen.text_center(string.format("is %d.%d.%d, needs 1.15.4", u.version[1], u.version[2], u.version[3]))
+    else
+      screen.text_center("didn't answer, may be too old")
+    end
+    screen.move(64, 31)
+    screen.text_center(names[u.board] .. (u.found.teensy and u.state == "ask" and "  (E2)" or ""))
+    screen.level(15)
+    screen.move(64, 46)
+    if u.state == "ask" then
+      screen.text_center("K3 update    K2 skip")
+      screen.level(5)
+      screen.move(64, 58)
+      screen.text_center("clears its saved patterns")
+    elseif u.state == "updating" then
+      screen.text_center(omxupdate.status or "updating")
+    elseif u.state == "done" then
+      screen.text_center("updated")
+    else
+      screen.text_center("update failed")
+      screen.level(5)
+      screen.move(64, 58)
+      screen.text_center("see data/nidhogg/omx-update/log")
+    end
+    screen.update()
+    return
+  end
+
   -- The OMX-27 frame is drawn first and copied off with screen.peek; only
   -- what's drawn after the second clear reaches the norns screen.
   if saver.active() then
