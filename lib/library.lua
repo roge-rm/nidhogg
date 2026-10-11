@@ -40,23 +40,29 @@ local function capture(cmd)
   return s
 end
 
+local OMX_UPDATE = _path.data .. "nidhogg/omx-update/"
+
 -- The first partition of the first USB disk, or the disk itself if it has
--- none. Controllers' own small drives aren't sticks: an RP2040's update
--- drive (an OMX-27 being updated), or a Launchpad's 192 KB "Easy Start"
--- drive. So anything under 64 MB, from Novation, or labelled RPI-RP2 is left
--- alone.
+-- none. Controllers' own drives aren't sticks: an RP2040's update drive (an
+-- OMX-27 being updated, vendor RPI, model RP2) or a Launchpad's 192 KB "Easy
+-- Start" drive. They're told from the disk's own vendor, model and size,
+-- which are there as soon as it appears (its label comes later). While an
+-- OMX-27 update runs, no drive is touched.
 local function find_device()
+  if read_all(OMX_UPDATE .. "update.sh") and not read_all(OMX_UPDATE .. "done") then return nil end
   local devs = capture("ls /dev/sd[a-z]* 2>/dev/null")
   local skip = {}
   for d in devs:gmatch("[^\n]+") do
-    local disk = d:match("^/dev/(sd[a-z])")
-    if d:match("^/dev/sd[a-z]$") then
-      local size, vendor = capture("lsblk -bdno SIZE,VENDOR " .. d .. " 2>/dev/null"):match("^%s*(%d+)%s*(.-)%s*$")
-      if not size or tonumber(size) < 64 * 1024 * 1024 or (vendor or ""):lower():find("novation") then
+    local disk = d:match("^/dev/(sd[a-z])$")
+    if disk then
+      local sys = "/sys/block/" .. disk
+      local vendor = (read_all(sys .. "/device/vendor") or ""):lower()
+      local model = (read_all(sys .. "/device/model") or ""):lower()
+      local sectors = tonumber(read_all(sys .. "/size") or "") or 0
+      if sectors * 512 < 64 * 1024 * 1024 or vendor:find("novation")
+        or (vendor:find("rpi") and model:find("rp2")) then
         skip[disk] = true
       end
-    elseif capture("lsblk -no LABEL " .. d .. " 2>/dev/null"):find("RPI%-RP2") then
-      skip[disk] = true
     end
   end
   local disk, part

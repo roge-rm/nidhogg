@@ -87,11 +87,23 @@ function up.start(found, done)
       "for i in $(seq 1 40); do [ -e /dev/disk/by-label/RPI-RP2 ] && break; sleep 0.5; done",
       "[ -e /dev/disk/by-label/RPI-RP2 ] || { say 'hold BOOTSEL on the OMX-27 while plugging it in'; for i in $(seq 1 120); do [ -e /dev/disk/by-label/RPI-RP2 ] && break; sleep 0.5; done; }",
       "say 'writing the firmware'",
+      -- let norns' own usbmount have its go at the drive first
+      "sleep 2",
       "sudo mkdir -p /mnt/omx27",
-      "sudo mount -o rw /dev/disk/by-label/RPI-RP2 /mnt/omx27",
-      "sudo cp " .. file .. " /mnt/omx27/",
-      "sync",
-      "sudo umount /mnt/omx27 || true",
+      "dev=$(readlink -f /dev/disk/by-label/RPI-RP2)",
+      "copied=",
+      "if sudo mount -o rw $dev /mnt/omx27 2>/dev/null; then"
+        .. " sudo mount -o remount,rw /mnt/omx27 2>/dev/null || true;"
+        .. " sudo cp " .. file .. " /mnt/omx27/ && sync && copied=1;"
+        -- it restarts as soon as the firmware lands, so this may fail
+        .. " sudo umount /mnt/omx27 2>/dev/null || true; fi",
+      -- usbmount may hold it, out of sight in udev's namespace: copy there
+      "if [ -z \"$copied\" ]; then"
+        .. " P=$(pgrep -xo systemd-udevd);"
+        .. " m=$(sudo nsenter -t $P -m awk -v d=$dev '$1==d {print $2; exit}' /proc/mounts);"
+        .. " [ -n \"$m\" ] && sudo nsenter -t $P -m mount -o remount,rw $m"
+        .. " && sudo nsenter -t $P -m cp \"$PWD/" .. file .. "\" $m/ && sudo nsenter -t $P -m sync && copied=1; fi",
+      "[ -n \"$copied\" ] || { say \"couldn't write the firmware\"; exit 1; }",
     }) do lines[#lines + 1] = l end
   else
     for _, l in ipairs({
