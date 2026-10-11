@@ -343,7 +343,12 @@ local function add_params()
   end)
 
   params:add_trigger("import", "import samples")
-  params:set_action("import", function() libui.open_import(modes.order[params:get("firmware")]) end)
+  -- these open a screen of nidhogg's own, which only shows outside the menu
+  local function leave_menu() if _menu and _menu.set_mode then _menu.set_mode(false) end end
+  params:set_action("import", function()
+    libui.open_import(modes.order[params:get("firmware")])
+    leave_menu()
+  end)
   params:add_trigger("update_omx", "update OMX-27")
   params:set_action("update_omx", function()
     -- the same update as for old firmware, offered for any OMX-27: to repair
@@ -354,9 +359,13 @@ local function add_params()
     else
       update_prompt = {state = "none"}
     end
+    leave_menu()
   end)
   params:add_trigger("library", "sample library")
-  params:set_action("library", function() libui.open_library(modes.order[params:get("firmware")]) end)
+  params:set_action("library", function()
+    libui.open_library(modes.order[params:get("firmware")])
+    leave_menu()
+  end)
 
   for _, fw in ipairs(modes.order) do
     options.add_params(fw, install.card_dir(fw))
