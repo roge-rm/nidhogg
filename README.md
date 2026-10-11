@@ -15,6 +15,7 @@ Dan
 
 - [What you need](#what-you-need)
 - [Installing](#installing)
+- [Updating](#updating)
 - [The keys and knobs](#the-keys-and-knobs)
 - [The norns screen](#the-norns-screen)
 - [Knobs and pages](#knobs-and-pages)
@@ -48,6 +49,13 @@ The OMX-27 needs [Quixotic7's firmware](https://github.com/Quixotic7/OMX-27), 1.
 The samples are in `dust/audio/nidhogg`, one folder per firmware, laid out like a CHOMPI SD card. To add your own, see [Importing samples](#importing-samples).
 
 If SuperCollider won't start after you've been logged in over ssh, restart the norns.
+
+## Updating
+
+1. In maiden, open the project list, find nidhogg and press **update**.
+2. Load nidhogg again. If its SuperCollider plugins have changed it installs them and restarts SuperCollider, then loads by itself.
+
+Your samples, library and settings stay as they are.
 
 ## The keys and knobs
 
