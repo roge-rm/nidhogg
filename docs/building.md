@@ -1,6 +1,6 @@
 # Building
 
-The plugins must be built for 32-bit ARM, so build on a norns (or another 32-bit Raspberry Pi OS with SuperCollider's headers). A Pi 4 builds all three in a few minutes.
+Build the plugins on a norns or another 32-bit Raspberry Pi OS with SuperCollider's headers. They target 32-bit ARM. A Pi 4 builds all three in a few minutes.
 
 You need cmake, the SuperCollider plugin headers (on norns in `/usr/local/include/SuperCollider`) and liblo. JACK is only needed for the test runner. All are on a stock norns.
 

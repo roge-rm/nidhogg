@@ -2,9 +2,9 @@
 
 nidhogg is the CHOMPI [open source firmware](https://github.com/CHOMPI-Club/CHOMPI) adapted to [norns](https://monome.org/docs/norns/) and designed around the [OMX-27](https://github.com/okyeron/OMX-27).
 
-Each of the three firmwares (TAPE, TEMPO, WAVE) is run using the actual code from the CHOMPI source, adapted to run under Linux. You can switch between them in the norns parameter edit screen - the state of each is saved when you switch away and resumed when you come back.
+TAPE, TEMPO and WAVE run the CHOMPI firmware code on Linux. Switch between them in the norns parameter editor. Each keeps its state and resumes when you return.
 
-This has been tested on my [shieldXL](https://github.com/okyeron/shieldXL) unit with a Pi4 2GB inside and on a Pi3 unit - like an official norns. Only the OMX-27, Exquis, Launchpad Pro and QuNexus are supported so far, if you'd like another controller supported please come chat with me in #nidhogg **[on my discord](https://discord.gg/9Wun47jGC6)** or open an issue here.
+I've tested it on my [shieldXL](https://github.com/okyeron/shieldXL) with a Pi 4 and 2 GB of memory, and on a Pi 3 like an official norns. OMX-27, Exquis, Launchpad Pro and QuNexus are supported. Ask about other controllers in #nidhogg [on my discord](https://discord.gg/9Wun47jGC6), or open an issue here.
 
 Thanks to the team at CHOMPI for open sourcing it, I hope this port does it justice.
 
@@ -36,9 +36,11 @@ Dan
 
 - A [norns](https://monome.org/docs/norns/) or [norns shield](https://github.com/okyeron/shieldXL).
 - An OMX-27 plugged into the norns by USB, any of the three boards, or one of the [other controllers](#other-controllers).
-- About 200 MB free, and wifi the first time.
+- About 200 MB free and Wi-Fi for the first install.
 
-The OMX-27 needs [Quixotic7's firmware](https://github.com/Quixotic7/OMX-27), 1.15.4 or newer. If it has something older nidhogg offers to update it: press **K3** to update or **K2** to skip. Updating clears the OMX-27's saved patterns. On a Teensy unit you may need to press the button on the Teensy when the screen asks. To update or repair one any time, use **update OMX-27** in **PARAMETERS > EDIT**.
+The OMX-27 needs [Quixotic7's firmware](https://github.com/Quixotic7/OMX-27) 1.15.4 or newer. With older firmware, nidhogg offers an update: K3 updates and K2 skips. Updating clears the OMX-27's saved patterns.
+
+On a Teensy unit, press the Teensy's button if asked. To update or repair it later, choose update OMX-27 under PARAMETERS > EDIT.
 
 ## Installing
 
@@ -134,7 +136,9 @@ To keep it, hold **AUX**, press **save**, press a white key 1-14, then press **A
 
 ## The OMX screen
 
-The little screen shows your knobs as five bars, one per pot, with a box when a knob is on page 2 or 3. A line in a bar is a pot that hasn't taken over yet. It switches to the sample window when you turn **Start** or **End**, and to the levels when you record. Tap **PUSH** to pick what it shows the rest of the time.
+The OMX screen shows five bars, one per pot. A box marks page 2 or 3, and a line marks a pot that hasn't taken over yet.
+
+Turning Start or End opens the sample window, and recording shows levels. Tap PUSH to choose the usual view.
 
 | | |
 |---|---|
